@@ -8,8 +8,7 @@
 package slave_control
 
 import (
-	"Unison-Elastic-Compute/api/types/control"
-	"Unison-Elastic-Compute/api/types/control/register"
+	"Unison-Elastic-Compute/pkg/internal/communication/connect"
 	"encoding/json"
 	"log"
 	"net"
@@ -29,8 +28,8 @@ func (sc *SlaveController) startControlListen() {
 
 func (sc *SlaveController) handleControlConnection(c net.Conn) {
 	d := json.NewDecoder(c)
-	message := control.Message{}
-	err := d.Decode(&message)
+	connectionHead := connect.ConnectionHead{}
+	err := d.Decode(&connectionHead)
 	defer func() {
 		if err != nil {
 			log.Println(err.Error())
@@ -41,16 +40,14 @@ func (sc *SlaveController) handleControlConnection(c net.Conn) {
 		return
 	}
 
-	switch message.MessageType {
-	case control.MessageTypeRegister:
-		if hs1b, ok := message.Value.(register.HandshakeStep1Body); ok {
-			sc.register(c, hs1b)
-		} else {
-			err = ErrConnectionRequestInvalid
-		}
-
-	case control.MessageTypeReconnect:
+	switch connectionHead.ConnectionType {
+	case connect.ConnectionTypeEstablishCtrlConnection:
+		sc.establishCtrlConnection(c)
+	case connect.ConnectionTypeEstablishDataConnection:
+		sc.establishDataConnection(c)
+	case connect.ConnectionTypeReconnect:
+	case connect.ConnectionTypeError:
 	default:
-		err = ErrConnectionRequestInvalid
+		err = ErrInvalidConnectionRequest
 	}
 }

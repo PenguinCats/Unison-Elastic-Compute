@@ -6,22 +6,30 @@ import (
 )
 
 type Master struct {
-	slaveController *slave_control.SlaveController
+	slaveController          *slave_control.SlaveController
+	SlaveControlListenerPort string
+
+	masterAPIPort string
 }
 
-func New(cmb master.CreatMasterBody) (*Master, error) {
-	slaveController, err := slave_control.NewSlaveController(slave_control.CreateSlaveControllerBody{
+func New(cmb master.CreatMasterBody) *Master {
+	m := &Master{
 		SlaveControlListenerPort: cmb.SlaveControlListenerPort,
+		masterAPIPort:            cmb.MasterAPIPort,
+	}
+	return m
+}
+
+func (m *Master) Start() error {
+	slaveController, err := slave_control.NewSlaveController(slave_control.CreateSlaveControllerBody{
+		SlaveControlListenerPort: m.SlaveControlListenerPort,
 	})
 	if err != nil {
-		return nil, slave_control.ErrSlaveControllerCreat
+		return slave_control.ErrSlaveControllerCreat
 	}
-	m := &Master{
-		slaveController: slaveController,
-	}
-	return m, nil
-}
+	m.slaveController = slaveController
 
-func (m *Master) Start() {
 	m.slaveController.Start()
+
+	return nil
 }

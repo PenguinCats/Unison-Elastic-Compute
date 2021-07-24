@@ -8,16 +8,17 @@
 package slave_control
 
 import (
-	"Unison-Elastic-Compute/api/types/control/register"
+	"Unison-Elastic-Compute/api/types/control/slave"
 	"Unison-Elastic-Compute/internal/auth"
+	"Unison-Elastic-Compute/pkg/internal/communication/connect/register"
 	"encoding/json"
 	"log"
 	"net"
-	"strings"
+	"sync"
 	"time"
 )
 
-func (sc *SlaveController) register(c net.Conn, hs1b register.HandshakeStep1Body) {
+func (sc *SlaveController) establishCtrlConnection(c net.Conn) {
 	var err error = nil
 	defer func() {
 		if err != nil {
@@ -26,22 +27,38 @@ func (sc *SlaveController) register(c net.Conn, hs1b register.HandshakeStep1Body
 		}
 	}()
 
-	// Handshake Step 1
-	// TODO: check Secret Key
-
+	d := json.NewDecoder(c)
 	e := json.NewEncoder(c)
-	adds := strings.Split(c.RemoteAddr().String(), ":")
-	if len(adds) != 2 {
-		err = ErrConnectionRequestWrongAddress
+
+	// Establish Ctrl Communication Hand shake Step 1
+	hs1b := register.EstablishCtrlConnectionHandshakeStep1Body{}
+	err = d.Decode(&hs1b)
+	if err != nil {
+		log.Println("0-1")
+		log.Println(err)
+		err = ErrEstablishCtrlConnInvalidRequest
 		return
 	}
-	ip, port := adds[0], adds[1]
 
-	// Handshake Step 2
-	localSeq := auth.GenerateRandomInt()
+	// TODO: check Secret Key
+
 	token := auth.GenerateRandomUUID()
 	uuid := auth.GenerateRandomUUID()
-	hs2b := register.HandshakeStep2Body{
+	scb := &SlaveControlBlock{
+		status:            slave.SlaveStatusWaitingEstablishControlConnection,
+		uuid:              uuid,
+		token:             token,
+		ctrConn:           c,
+		lastHeartBeatTime: time.Now(),
+		mu:                sync.RWMutex{},
+	}
+	sc.slaveCtrBlkMutex.Lock()
+	sc.slaveCtrBlk[uuid] = scb
+	sc.slaveCtrBlkMutex.Unlock()
+
+	// Establish Ctrl Communication Hand shake Step 2
+	localSeq := auth.GenerateRandomInt()
+	hs2b := register.EstablishCtrlConnectionHandshakeStep2Body{
 		Ack:   hs1b.Seq + 1,
 		Seq:   localSeq,
 		Token: token,
@@ -50,34 +67,92 @@ func (sc *SlaveController) register(c net.Conn, hs1b register.HandshakeStep1Body
 
 	err = e.Encode(&hs2b)
 	if err != nil {
-		err = ErrRegisterInvalidBody
+		log.Println("0-2")
+		log.Println(err)
+		err = ErrEstablishCtrlConnStepFail
 		return
 	}
 
-	// Handshake Step 3
-	d := json.NewDecoder(c)
-	hs3b := register.HandshakeStep3Body{}
+	// Establish Ctrl Communication Hand shake Step 3
+	hs3b := register.EstablishCtrlConnectionHandshakeStep3Body{}
 	err = d.Decode(&hs3b)
 	if err != nil {
-		err = ErrRegisterInvalidBody
+		log.Println("0-3")
+		log.Println(err)
+		err = ErrEstablishCtrlConnInvalidRequest
 		return
 	}
 
 	if hs3b.Ack != localSeq+1 {
-		err = ErrRegisterInvalidInfo
+		log.Println("0-4")
+		log.Println(err)
+		err = ErrEstablishCtrlConnInvalidRequest
 		return
 	}
 
-	sc.slaveCtrBlkMutex.Lock()
-	scb := &SlaveControlBlock{
-		UUID:              uuid,
-		IP:                ip,
-		Port:              port,
-		Token:             token,
-		ctrConn:           c,
-		LastHeartBeatTime: time.Now(),
-	}
-	sc.slaveCtrBlk[uuid] = scb
-	sc.slaveCtrBlkMutex.Unlock()
-	go scb.start()
+	scb.mu.Lock()
+	scb.status = slave.SlaveStatusWaitingEstablishDataConnection
+	scb.mu.Unlock()
 }
+
+func (sc *SlaveController) establishDataConnection(c net.Conn) {
+	var err error = nil
+	defer func() {
+		if err != nil {
+			_ = c.Close()
+			log.Println(err.Error())
+		}
+	}()
+
+	d := json.NewDecoder(c)
+	e := json.NewEncoder(c)
+
+	// Establish Data Communication Step 1
+	hs1b := register.EstablishDataConnectionHandShakeStep1Body{}
+	err = d.Decode(&hs1b)
+	if err != nil {
+		log.Println("1-1")
+		log.Println(err)
+		err = ErrEstablishDataConnInvalidRequest
+		return
+	}
+
+	sc.slaveCtrBlkMutex.RLock()
+	scb, ok := sc.slaveCtrBlk[hs1b.UUID]
+	sc.slaveCtrBlkMutex.RUnlock()
+	if ok != true {
+		log.Println("1-2")
+		log.Println(err)
+		err = ErrEstablishDataConnInvalidRequest
+		return
+	}
+
+	scb.mu.Lock()
+	scb.dataConn = c
+	scb.mu.Unlock()
+
+	scb.mu.RLock()
+	ok = scb.token == hs1b.Token
+	scb.mu.RUnlock()
+	if ok != true {
+		log.Println("1-3")
+		log.Println(err)
+		err = ErrEstablishDataConnInvalidRequest
+		return
+	}
+
+	// Establish Data Communication Step 2
+	edcs2 := register.EstablishDataConnectionHandShakeStep2Body{}
+
+	err = e.Encode(&edcs2)
+	if err != nil {
+		err = ErrEstablishDataConnStepFail
+		return
+	}
+
+	scb.mu.Lock()
+	scb.status = slave.SlaveStatusNormal
+	scb.mu.Unlock()
+}
+
+// TODO: 巡检

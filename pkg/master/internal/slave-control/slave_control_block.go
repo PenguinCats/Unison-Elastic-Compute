@@ -8,19 +8,24 @@
 package slave_control
 
 import (
+	"Unison-Elastic-Compute/api/types/control/slave"
 	"net"
+	"sync"
 	"time"
 )
 
 type SlaveControlBlock struct {
-	UUID  string
-	IP    string
-	Port  string
-	Token string
+	status slave.StatusSlave
 
-	ctrConn net.Conn
+	uuid  string
+	token string
 
-	LastHeartBeatTime time.Time
+	ctrConn  net.Conn
+	dataConn net.Conn
+
+	lastHeartBeatTime time.Time
+
+	mu sync.RWMutex
 }
 
 func (scb *SlaveControlBlock) start() {

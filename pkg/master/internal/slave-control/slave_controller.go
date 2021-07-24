@@ -28,18 +28,17 @@ func NewSlaveController(cscb CreateSlaveControllerBody) (*SlaveController, error
 	if err != nil {
 		return nil, ErrListenerCreat
 	}
+	defer func() {
+		if err != nil {
+			_ = ln.Close()
+		}
+	}()
 
 	sc := &SlaveController{
 		ctrlLn:           ln,
 		slaveCtrBlk:      make(map[string]*SlaveControlBlock),
 		slaveCtrBlkMutex: sync.RWMutex{},
 	}
-
-	defer func() {
-		if err != nil {
-			_ = ln.Close()
-		}
-	}()
 
 	return sc, nil
 }

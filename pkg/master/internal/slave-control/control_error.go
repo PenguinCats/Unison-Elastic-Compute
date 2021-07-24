@@ -10,13 +10,15 @@ package slave_control
 import "errors"
 
 var (
-	ErrSlaveControllerCreat = errors.New("create slave controller fail")
-
 	ErrListenerCreat = errors.New("create slave control listener fail")
 
-	ErrConnectionRequestInvalid      = errors.New("connect request is invalid")
-	ErrConnectionRequestWrongAddress = errors.New("connect request has a wrong address")
+	ErrSlaveControllerCreat = errors.New("create slave controller fail")
 
-	ErrRegisterInvalidBody = errors.New("register body is invalid")
-	ErrRegisterInvalidInfo = errors.New("register info is invalid")
+	ErrInvalidConnectionRequest = errors.New("invalid connect request")
+
+	ErrEstablishCtrlConnInvalidRequest = errors.New("invalid establish ctrl connect request")
+	ErrEstablishCtrlConnStepFail       = errors.New("establish ctrl connect step fail")
+
+	ErrEstablishDataConnInvalidRequest = errors.New("invalid establish data connect request")
+	ErrEstablishDataConnStepFail       = errors.New("establish data connect step fail")
 )
