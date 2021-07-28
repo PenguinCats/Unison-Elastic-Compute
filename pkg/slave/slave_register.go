@@ -20,7 +20,6 @@ func (slave *Slave) register() error {
 	}
 
 	slave.status = slave2.SlaveStatusNormal
-
 	return nil
 }
 

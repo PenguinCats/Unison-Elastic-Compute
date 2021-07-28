@@ -9,6 +9,7 @@ package slave_control
 
 import (
 	"Unison-Elastic-Compute/api/types/control/slave"
+	"encoding/json"
 	"net"
 	"sync"
 	"time"
@@ -20,8 +21,10 @@ type SlaveControlBlock struct {
 	uuid  string
 	token string
 
-	ctrConn  net.Conn
-	dataConn net.Conn
+	ctrlConn    net.Conn
+	ctrlDecoder *json.Decoder
+	dataConn    net.Conn
+	dataDecoder *json.Decoder
 
 	lastHeartBeatTime time.Time
 

@@ -15,36 +15,36 @@ import (
 )
 
 func (sc *SlaveController) startControlListen() {
-	go func() {
-		for {
-			conn, err := sc.ctrlLn.Accept()
-			if err != nil {
-				continue
-			}
-			go sc.handleControlConnection(conn)
+	for {
+		conn, err := sc.ctrlLn.Accept()
+		if err != nil {
+			continue
 		}
-	}()
+		go sc.handleControlConnection(conn)
+	}
 }
 
 func (sc *SlaveController) handleControlConnection(c net.Conn) {
-	d := json.NewDecoder(c)
-	connectionHead := connect.ConnectionHead{}
-	err := d.Decode(&connectionHead)
+	var err error = nil
 	defer func() {
 		if err != nil {
 			log.Println(err.Error())
 			_ = c.Close()
 		}
 	}()
+
+	d := json.NewDecoder(c)
+	connectionHead := connect.ConnectionHead{}
+	err = d.Decode(&connectionHead)
 	if err != nil {
 		return
 	}
 
 	switch connectionHead.ConnectionType {
 	case connect.ConnectionTypeEstablishCtrlConnection:
-		sc.establishCtrlConnection(c)
+		sc.establishCtrlConnection(c, d)
 	case connect.ConnectionTypeEstablishDataConnection:
-		sc.establishDataConnection(c)
+		sc.establishDataConnection(c, d)
 	case connect.ConnectionTypeReconnect:
 	case connect.ConnectionTypeError:
 	default:

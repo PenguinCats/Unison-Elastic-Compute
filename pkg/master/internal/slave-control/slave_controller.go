@@ -44,5 +44,5 @@ func NewSlaveController(cscb CreateSlaveControllerBody) (*SlaveController, error
 }
 
 func (sc *SlaveController) Start() {
-	sc.startControlListen()
+	go sc.startControlListen()
 }

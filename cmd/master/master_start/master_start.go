@@ -11,6 +11,7 @@ import (
 	master2 "Unison-Elastic-Compute/api/types/control/master"
 	"Unison-Elastic-Compute/cmd/master/internal/settings"
 	"Unison-Elastic-Compute/pkg/master"
+	"time"
 )
 
 func main() {
@@ -30,5 +31,6 @@ func main() {
 		panic(err.Error())
 	}
 
+	time.Sleep(time.Second * 5)
 	<-ch
 }

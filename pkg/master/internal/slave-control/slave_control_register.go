@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-func (sc *SlaveController) establishCtrlConnection(c net.Conn) {
+func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) {
 	var err error = nil
 	defer func() {
 		if err != nil {
@@ -27,15 +27,12 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn) {
 		}
 	}()
 
-	d := json.NewDecoder(c)
 	e := json.NewEncoder(c)
 
 	// Establish Ctrl Communication Hand shake Step 1
 	hs1b := register.EstablishCtrlConnectionHandshakeStep1Body{}
 	err = d.Decode(&hs1b)
 	if err != nil {
-		log.Println("0-1")
-		log.Println(err)
 		err = ErrEstablishCtrlConnInvalidRequest
 		return
 	}
@@ -48,7 +45,8 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn) {
 		status:            slave.SlaveStatusWaitingEstablishControlConnection,
 		uuid:              uuid,
 		token:             token,
-		ctrConn:           c,
+		ctrlConn:          c,
+		ctrlDecoder:       d,
 		lastHeartBeatTime: time.Now(),
 		mu:                sync.RWMutex{},
 	}
@@ -67,8 +65,6 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn) {
 
 	err = e.Encode(&hs2b)
 	if err != nil {
-		log.Println("0-2")
-		log.Println(err)
 		err = ErrEstablishCtrlConnStepFail
 		return
 	}
@@ -77,15 +73,11 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn) {
 	hs3b := register.EstablishCtrlConnectionHandshakeStep3Body{}
 	err = d.Decode(&hs3b)
 	if err != nil {
-		log.Println("0-3")
-		log.Println(err)
 		err = ErrEstablishCtrlConnInvalidRequest
 		return
 	}
 
 	if hs3b.Ack != localSeq+1 {
-		log.Println("0-4")
-		log.Println(err)
 		err = ErrEstablishCtrlConnInvalidRequest
 		return
 	}
@@ -95,7 +87,7 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn) {
 	scb.mu.Unlock()
 }
 
-func (sc *SlaveController) establishDataConnection(c net.Conn) {
+func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) {
 	var err error = nil
 	defer func() {
 		if err != nil {
@@ -104,15 +96,12 @@ func (sc *SlaveController) establishDataConnection(c net.Conn) {
 		}
 	}()
 
-	d := json.NewDecoder(c)
 	e := json.NewEncoder(c)
 
 	// Establish Data Communication Step 1
 	hs1b := register.EstablishDataConnectionHandShakeStep1Body{}
 	err = d.Decode(&hs1b)
 	if err != nil {
-		log.Println("1-1")
-		log.Println(err)
 		err = ErrEstablishDataConnInvalidRequest
 		return
 	}
@@ -121,25 +110,22 @@ func (sc *SlaveController) establishDataConnection(c net.Conn) {
 	scb, ok := sc.slaveCtrBlk[hs1b.UUID]
 	sc.slaveCtrBlkMutex.RUnlock()
 	if ok != true {
-		log.Println("1-2")
-		log.Println(err)
+		err = ErrEstablishDataConnInvalidRequest
+		return
+	}
+
+	scb.mu.RLock()
+	ok = scb.token == hs1b.Token
+	scb.mu.RUnlock()
+	if ok != true {
 		err = ErrEstablishDataConnInvalidRequest
 		return
 	}
 
 	scb.mu.Lock()
 	scb.dataConn = c
+	scb.dataDecoder = d
 	scb.mu.Unlock()
-
-	scb.mu.RLock()
-	ok = scb.token == hs1b.Token
-	scb.mu.RUnlock()
-	if ok != true {
-		log.Println("1-3")
-		log.Println(err)
-		err = ErrEstablishDataConnInvalidRequest
-		return
-	}
 
 	// Establish Data Communication Step 2
 	edcs2 := register.EstablishDataConnectionHandShakeStep2Body{}
