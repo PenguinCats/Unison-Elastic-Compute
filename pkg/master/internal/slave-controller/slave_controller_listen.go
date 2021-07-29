@@ -5,7 +5,7 @@
  * @Description: nil
  */
 
-package slave_control
+package slave_controller
 
 import (
 	"Unison-Elastic-Compute/pkg/internal/communication/connect"
@@ -15,13 +15,15 @@ import (
 )
 
 func (sc *SlaveController) startControlListen() {
-	for {
-		conn, err := sc.ctrlLn.Accept()
-		if err != nil {
-			continue
+	go func() {
+		for {
+			conn, err := sc.ctrlLn.Accept()
+			if err != nil {
+				continue
+			}
+			go sc.handleControlConnection(conn)
 		}
-		go sc.handleControlConnection(conn)
-	}
+	}()
 }
 
 func (sc *SlaveController) handleControlConnection(c net.Conn) {

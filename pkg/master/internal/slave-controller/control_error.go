@@ -5,7 +5,7 @@
  * @Description: nil
  */
 
-package slave_control
+package slave_controller
 
 import "errors"
 
@@ -21,4 +21,7 @@ var (
 
 	ErrEstablishDataConnInvalidRequest = errors.New("invalid establish data connect request")
 	ErrEstablishDataConnStepFail       = errors.New("establish data connect step fail")
+
+	ErrControlInvalidMessage   = errors.New("invalid control message")
+	ErrControlInvalidHeartbeat = errors.New("invalid heartbeat message")
 )

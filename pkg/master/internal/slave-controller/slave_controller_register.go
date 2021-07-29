@@ -5,16 +5,16 @@
  * @Description: nil
  */
 
-package slave_control
+package slave_controller
 
 import (
 	"Unison-Elastic-Compute/api/types/control/slave"
 	"Unison-Elastic-Compute/internal/auth"
 	"Unison-Elastic-Compute/pkg/internal/communication/connect/register"
+	"Unison-Elastic-Compute/pkg/master/internal/slave-controller/slave_control_block"
 	"encoding/json"
 	"log"
 	"net"
-	"sync"
 	"time"
 )
 
@@ -41,15 +41,10 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 
 	token := auth.GenerateRandomUUID()
 	uuid := auth.GenerateRandomUUID()
-	scb := &SlaveControlBlock{
-		status:            slave.SlaveStatusWaitingEstablishControlConnection,
-		uuid:              uuid,
-		token:             token,
-		ctrlConn:          c,
-		ctrlDecoder:       d,
-		lastHeartBeatTime: time.Now(),
-		mu:                sync.RWMutex{},
-	}
+
+	scb := slave_control_block.NewWithCtrl(slave.SlaveStatusWaitingEstablishControlConnection, uuid, token, c, d)
+	scb.UpdateLastHeartbeatTime(time.Now())
+
 	sc.slaveCtrBlkMutex.Lock()
 	sc.slaveCtrBlk[uuid] = scb
 	sc.slaveCtrBlkMutex.Unlock()
@@ -82,9 +77,8 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
-	scb.mu.Lock()
-	scb.status = slave.SlaveStatusWaitingEstablishDataConnection
-	scb.mu.Unlock()
+	scb.SetStatus(slave.SlaveStatusWaitingEstablishDataConnection)
+	scb.UpdateLastHeartbeatTime(time.Now())
 }
 
 func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) {
@@ -114,18 +108,15 @@ func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
-	scb.mu.RLock()
-	ok = scb.token == hs1b.Token
-	scb.mu.RUnlock()
+	ok = scb.GetToken() == hs1b.Token
 	if ok != true {
 		err = ErrEstablishDataConnInvalidRequest
 		return
 	}
 
-	scb.mu.Lock()
-	scb.dataConn = c
-	scb.dataDecoder = d
-	scb.mu.Unlock()
+	scb.SetDataConn(c)
+	scb.SetDataDecoder(d)
+	scb.UpdateLastHeartbeatTime(time.Now())
 
 	// Establish Data Communication Step 2
 	edcs2 := register.EstablishDataConnectionHandShakeStep2Body{}
@@ -136,9 +127,7 @@ func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
-	scb.mu.Lock()
-	scb.status = slave.SlaveStatusNormal
-	scb.mu.Unlock()
+	scb.SetStatus(slave.SlaveStatusNormal)
 }
 
 // TODO: 巡检

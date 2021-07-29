@@ -1,13 +1,14 @@
 /**
- * @File: slave_controller
+ * @File: slave_control
  * @Date: 2021/7/15 上午9:54
  * @Author: Binjie Zhang (bj_zhang@seu.edu.cn)
  * @Description: nil
  */
 
-package slave_control
+package slave_controller
 
 import (
+	"Unison-Elastic-Compute/pkg/master/internal/slave-controller/slave_control_block"
 	"net"
 	"sync"
 )
@@ -19,7 +20,7 @@ type CreateSlaveControllerBody struct {
 type SlaveController struct {
 	ctrlLn net.Listener
 
-	slaveCtrBlk      map[string]*SlaveControlBlock
+	slaveCtrBlk      map[string]*slave_control_block.SlaveControlBlock
 	slaveCtrBlkMutex sync.RWMutex
 }
 
@@ -36,7 +37,7 @@ func NewSlaveController(cscb CreateSlaveControllerBody) (*SlaveController, error
 
 	sc := &SlaveController{
 		ctrlLn:           ln,
-		slaveCtrBlk:      make(map[string]*SlaveControlBlock),
+		slaveCtrBlk:      make(map[string]*slave_control_block.SlaveControlBlock),
 		slaveCtrBlkMutex: sync.RWMutex{},
 	}
 
@@ -44,5 +45,5 @@ func NewSlaveController(cscb CreateSlaveControllerBody) (*SlaveController, error
 }
 
 func (sc *SlaveController) Start() {
-	go sc.startControlListen()
+	sc.startControlListen()
 }

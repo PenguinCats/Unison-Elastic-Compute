@@ -7,16 +7,14 @@
 
 package control
 
-type MessageType int
+type MessageCtrlType int
 
 const (
-	MessageTypeEstablishCtrlConnection MessageType = iota
-	MessageTypeEstablishDataConnection
-	MessageTypeReconnect
-	MessageTypeError
+	MessageCtrlTypeHeartbeat MessageCtrlType = iota
+	MessageCtrlTypeError
 )
 
 type Message struct {
-	MessageType MessageType `json:"message_type"`
-	Value       []byte      `json:"value"`
+	MessageType MessageCtrlType `json:"message_type"`
+	Value       []byte          `json:"value"`
 }

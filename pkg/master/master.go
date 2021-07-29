@@ -2,11 +2,11 @@ package master
 
 import (
 	"Unison-Elastic-Compute/api/types/control/master"
-	"Unison-Elastic-Compute/pkg/master/internal/slave-control"
+	"Unison-Elastic-Compute/pkg/master/internal/slave-controller"
 )
 
 type Master struct {
-	slaveController          *slave_control.SlaveController
+	slaveController          *slave_controller.SlaveController
 	SlaveControlListenerPort string
 
 	masterAPIPort string
@@ -21,11 +21,11 @@ func New(cmb master.CreatMasterBody) *Master {
 }
 
 func (m *Master) Start() error {
-	slaveController, err := slave_control.NewSlaveController(slave_control.CreateSlaveControllerBody{
+	slaveController, err := slave_controller.NewSlaveController(slave_controller.CreateSlaveControllerBody{
 		SlaveControlListenerPort: m.SlaveControlListenerPort,
 	})
 	if err != nil {
-		return slave_control.ErrSlaveControllerCreat
+		return slave_controller.ErrSlaveControllerCreat
 	}
 	m.slaveController = slaveController
 
