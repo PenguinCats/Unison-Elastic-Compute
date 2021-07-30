@@ -8,9 +8,9 @@
 package slave_controller
 
 import (
-	"Unison-Elastic-Compute/pkg/internal/communication/connect"
+	connect2 "Unison-Elastic-Compute/pkg/internal/communication/api/connect"
 	"encoding/json"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net"
 )
 
@@ -19,6 +19,7 @@ func (sc *SlaveController) startControlListen() {
 		for {
 			conn, err := sc.ctrlLn.Accept()
 			if err != nil {
+				logrus.Info(err.Error())
 				continue
 			}
 			go sc.handleControlConnection(conn)
@@ -30,25 +31,25 @@ func (sc *SlaveController) handleControlConnection(c net.Conn) {
 	var err error = nil
 	defer func() {
 		if err != nil {
-			log.Println(err.Error())
+			logrus.Info(err.Error())
 			_ = c.Close()
 		}
 	}()
 
 	d := json.NewDecoder(c)
-	connectionHead := connect.ConnectionHead{}
+	connectionHead := connect2.ConnectionHead{}
 	err = d.Decode(&connectionHead)
 	if err != nil {
 		return
 	}
 
 	switch connectionHead.ConnectionType {
-	case connect.ConnectionTypeEstablishCtrlConnection:
+	case connect2.ConnectionTypeEstablishCtrlConnection:
 		sc.establishCtrlConnection(c, d)
-	case connect.ConnectionTypeEstablishDataConnection:
+	case connect2.ConnectionTypeEstablishDataConnection:
 		sc.establishDataConnection(c, d)
-	case connect.ConnectionTypeReconnect:
-	case connect.ConnectionTypeError:
+	case connect2.ConnectionTypeReconnect:
+	case connect2.ConnectionTypeError:
 	default:
 		err = ErrInvalidConnectionRequest
 	}

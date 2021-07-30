@@ -1,4 +1,4 @@
-package slave_control_block
+package control
 
 import "errors"
 

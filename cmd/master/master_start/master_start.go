@@ -11,11 +11,15 @@ import (
 	master2 "Unison-Elastic-Compute/api/types/control/master"
 	"Unison-Elastic-Compute/cmd/master/internal/settings"
 	"Unison-Elastic-Compute/pkg/master"
+	nested "github.com/antonfisher/nested-logrus-formatter"
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
 func main() {
-	ch := make(chan bool, 1)
+	logrus.SetFormatter(&nested.Formatter{
+		ShowFullLevel: true,
+	})
 
 	if err := settings.LoadGlobalSetting("cmd/master/conf.ini"); err != nil {
 
@@ -32,5 +36,7 @@ func main() {
 	}
 
 	time.Sleep(time.Second * 5)
+
+	ch := make(chan bool, 1)
 	<-ch
 }

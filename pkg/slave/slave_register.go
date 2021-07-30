@@ -4,8 +4,8 @@ import (
 	slave2 "Unison-Elastic-Compute/api/types/control/slave"
 	"Unison-Elastic-Compute/internal/auth"
 	"Unison-Elastic-Compute/internal/network"
-	"Unison-Elastic-Compute/pkg/internal/communication/connect"
-	"Unison-Elastic-Compute/pkg/internal/communication/connect/register"
+	connect2 "Unison-Elastic-Compute/pkg/internal/communication/api/connect"
+	register2 "Unison-Elastic-Compute/pkg/internal/communication/api/connect/register"
 	"encoding/json"
 	"fmt"
 )
@@ -19,7 +19,7 @@ func (slave *Slave) register() error {
 		return err
 	}
 
-	slave.status = slave2.SlaveStatusNormal
+	slave.status = slave2.StatusNormal
 	return nil
 }
 
@@ -38,14 +38,14 @@ func (slave *Slave) establishCtrlConn(ip, port, secretKey string) error {
 	d := json.NewDecoder(conn)
 
 	// Mark the purpose of the connect
-	err = e.Encode(&connect.ConnectionHead{ConnectionType: connect.ConnectionTypeEstablishCtrlConnection})
+	err = e.Encode(&connect2.ConnectionHead{ConnectionType: connect2.ConnectionTypeEstablishCtrlConnection})
 	if err != nil {
 		return fmt.Errorf("establish ctrl connect failed with [%s]", err.Error())
 	}
 
 	// Handshake Step 1
 	localSeq := auth.GenerateRandomInt()
-	hs1b := register.EstablishCtrlConnectionHandshakeStep1Body{
+	hs1b := register2.EstablishCtrlConnectionHandshakeStep1Body{
 		SecretKey: secretKey,
 		Seq:       localSeq,
 	}
@@ -55,7 +55,7 @@ func (slave *Slave) establishCtrlConn(ip, port, secretKey string) error {
 	}
 
 	// Handshake Step 2
-	hs2b := register.EstablishCtrlConnectionHandshakeStep2Body{}
+	hs2b := register2.EstablishCtrlConnectionHandshakeStep2Body{}
 	err = d.Decode(&hs2b)
 	if err != nil {
 		return fmt.Errorf("establish ctrl connect failed in step 2 with [%s]", err.Error())
@@ -67,7 +67,7 @@ func (slave *Slave) establishCtrlConn(ip, port, secretKey string) error {
 	slave.token = hs2b.Token
 
 	// Handshake Step 3
-	hs3b := register.EstablishCtrlConnectionHandshakeStep3Body{
+	hs3b := register2.EstablishCtrlConnectionHandshakeStep3Body{
 		Ack: hs2b.Seq + 1,
 	}
 	err = e.Encode(&hs3b)
@@ -75,7 +75,9 @@ func (slave *Slave) establishCtrlConn(ip, port, secretKey string) error {
 		return fmt.Errorf("establish ctrl connect failed in step 3 with [%s]", err.Error())
 	}
 
-	slave.ctrlConnWithMaster = conn
+	slave.ctrlConn = conn
+	slave.ctrlDecoder = d
+	slave.ctrlEncoder = e
 	return nil
 }
 
@@ -94,13 +96,13 @@ func (slave *Slave) establishDataConn(ip, port, uuid, token string) error {
 	d := json.NewDecoder(conn)
 
 	// Mark the purpose of the connect
-	err = e.Encode(&connect.ConnectionHead{ConnectionType: connect.ConnectionTypeEstablishDataConnection})
+	err = e.Encode(&connect2.ConnectionHead{ConnectionType: connect2.ConnectionTypeEstablishDataConnection})
 	if err != nil {
 		return fmt.Errorf("establish data connect failed with [%s]", err.Error())
 	}
 
 	// Establish Data Connection Handshake Step 1
-	hs1b := register.EstablishDataConnectionHandShakeStep1Body{
+	hs1b := register2.EstablishDataConnectionHandShakeStep1Body{
 		UUID:  uuid,
 		Token: token,
 	}
@@ -110,12 +112,14 @@ func (slave *Slave) establishDataConn(ip, port, uuid, token string) error {
 	}
 
 	// Establish Data Connection Handshake Step 2
-	hs2b := register.EstablishDataConnectionHandShakeStep2Body{}
+	hs2b := register2.EstablishDataConnectionHandShakeStep2Body{}
 	err = d.Decode(&hs2b)
 	if err != nil {
 		return fmt.Errorf("establish data connect failed in step 2 with [%s]", err.Error())
 	}
 
-	slave.dataConnWithMaster = conn
+	slave.dataConn = conn
+	slave.dataDecoder = d
+	slave.dataEncoder = e
 	return nil
 }

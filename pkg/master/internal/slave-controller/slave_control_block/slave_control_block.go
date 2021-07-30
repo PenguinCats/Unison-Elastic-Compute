@@ -9,9 +9,10 @@ package slave_control_block
 
 import (
 	"Unison-Elastic-Compute/api/types/control/slave"
-	"Unison-Elastic-Compute/pkg/internal/communication/control"
+	control2 "Unison-Elastic-Compute/pkg/internal/communication/api/control"
+	"context"
 	"encoding/json"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
 	"time"
@@ -24,23 +25,28 @@ type SlaveControlBlock struct {
 	token string
 
 	ctrlConn    net.Conn
+	ctrlEncoder *json.Encoder
 	ctrlDecoder *json.Decoder
 	dataConn    net.Conn
+	dataEncoder *json.Encoder
 	dataDecoder *json.Decoder
 
-	lastHeartBeatTime     time.Time
-	lastHeartBeatTimeLock sync.RWMutex
+	scbStopFunc context.CancelFunc
 
 	mu sync.RWMutex
+
+	lastHeartbeatTime     time.Time
+	lastHeartbeatTimeLock sync.RWMutex
 }
 
 func NewWithCtrl(status slave.StatusSlave, uuid, token string,
-	ctrlConn net.Conn, ctrlDecoder *json.Decoder) *SlaveControlBlock {
+	ctrlConn net.Conn, ctrlEncoder *json.Encoder, ctrlDecoder *json.Decoder) *SlaveControlBlock {
 	return &SlaveControlBlock{
 		status:      status,
 		uuid:        uuid,
 		token:       token,
 		ctrlConn:    ctrlConn,
+		ctrlEncoder: ctrlEncoder,
 		ctrlDecoder: ctrlDecoder,
 	}
 }
@@ -51,18 +57,22 @@ func (scb *SlaveControlBlock) SetStatus(statusSlave slave.StatusSlave) {
 	scb.mu.Unlock()
 }
 
-func (scb *SlaveControlBlock) GetUUID() (uuid string) {
+func (scb *SlaveControlBlock) GetStatus() slave.StatusSlave {
 	scb.mu.RLock()
-	uuid = scb.uuid
-	scb.mu.RUnlock()
-	return
+	defer scb.mu.RUnlock()
+	return scb.status
 }
 
-func (scb *SlaveControlBlock) GetToken() (token string) {
+func (scb *SlaveControlBlock) GetUUID() string {
 	scb.mu.RLock()
-	token = scb.token
-	scb.mu.RUnlock()
-	return
+	defer scb.mu.RUnlock()
+	return scb.uuid
+}
+
+func (scb *SlaveControlBlock) GetToken() string {
+	scb.mu.RLock()
+	defer scb.mu.RUnlock()
+	return scb.token
 }
 
 func (scb *SlaveControlBlock) SetCtrlConn(c net.Conn) {
@@ -71,8 +81,9 @@ func (scb *SlaveControlBlock) SetCtrlConn(c net.Conn) {
 	scb.mu.Unlock()
 }
 
-func (scb *SlaveControlBlock) SetCtrlDecoder(d *json.Decoder) {
+func (scb *SlaveControlBlock) SetCtrlEncoderDecoder(e *json.Encoder, d *json.Decoder) {
 	scb.mu.Lock()
+	scb.ctrlEncoder = e
 	scb.ctrlDecoder = d
 	scb.mu.Unlock()
 }
@@ -83,45 +94,79 @@ func (scb *SlaveControlBlock) SetDataConn(c net.Conn) {
 	scb.mu.Unlock()
 }
 
-func (scb *SlaveControlBlock) SetDataDecoder(d *json.Decoder) {
+func (scb *SlaveControlBlock) SetDataEncoderDecoder(e *json.Encoder, d *json.Decoder) {
 	scb.mu.Lock()
+	scb.dataEncoder = e
 	scb.dataDecoder = d
 	scb.mu.Unlock()
 }
 
-func (scb *SlaveControlBlock) start() {
-	scb.startHandleCtrlMessage()
-	scb.startHeartbeatCheck()
+func (scb *SlaveControlBlock) Start() {
+	logrus.Warning("new slave joined")
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	scb.mu.Lock()
+	scb.scbStopFunc = cancel
+	scb.mu.Unlock()
+
+	scb.startHandleCtrlMessage(ctx)
+	//scb.startHeartbeatCheck(ctx)
 }
 
-func (scb *SlaveControlBlock) stop() {
-
+func (scb *SlaveControlBlock) stopActivity() {
+	scb.mu.Lock()
+	scb.scbStopFunc()
+	_ = scb.ctrlConn.Close()
+	_ = scb.dataConn.Close()
+	scb.mu.Unlock()
 }
 
-func (scb *SlaveControlBlock) startHandleCtrlMessage() {
+func (scb *SlaveControlBlock) offline() {
+	scb.stopActivity()
+	scb.mu.Lock()
+	scb.status = slave.StatusOffline
+	scb.mu.Unlock()
+	logrus.Warningf("slave [%s] offline", scb.GetUUID())
+}
+
+func (scb *SlaveControlBlock) StopWork() {
+	scb.stopActivity()
+	scb.mu.Lock()
+	scb.status = slave.StatusStopped
+	scb.mu.Unlock()
+	logrus.Warningf("slave [%s] stop", scb.GetUUID())
+}
+
+func (scb *SlaveControlBlock) startHandleCtrlMessage(ctx context.Context) {
 	go func() {
 		var err error = nil
 		defer func() {
 			if err != nil {
-				log.Println(err.Error())
-				scb.stop()
+				logrus.Warning(err.Error())
+				scb.offline()
 			}
 		}()
 
 		for {
-			message := control.Message{}
-			err = scb.ctrlDecoder.Decode(&message)
-			if err != nil {
-				err = ErrControlInvalidMessage
+			select {
+			case <-ctx.Done():
 				return
-			}
-
-			switch message.MessageType {
-			case control.MessageCtrlTypeHeartbeat:
-				scb.HandleHeartbeatMessage(message.Value)
 			default:
-				err = ErrControlInvalidMessage
-				return
+				message := control2.Message{}
+				err = scb.ctrlDecoder.Decode(&message)
+				if err != nil {
+					err = control2.ErrControlInvalidMessage
+					return
+				}
+
+				switch message.MessageType {
+				case control2.MessageCtrlTypeHeartbeat:
+					scb.handleHeartbeatMessage(message.Value)
+				default:
+					err = control2.ErrControlInvalidMessage
+					return
+				}
 			}
 		}
 	}()

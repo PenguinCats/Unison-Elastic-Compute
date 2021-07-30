@@ -10,8 +10,9 @@ package slave
 type StatusSlave int
 
 const (
-	SlaveStatusWaitingEstablishControlConnection StatusSlave = iota
-	SlaveStatusWaitingEstablishDataConnection
-	SlaveStatusNormal
-	SlaveStatusOffline
+	StatusWaitingEstablishControlConnection StatusSlave = iota
+	StatusWaitingEstablishDataConnection
+	StatusNormal
+	StatusStopped
+	StatusOffline
 )

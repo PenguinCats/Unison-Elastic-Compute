@@ -10,10 +10,10 @@ package slave_controller
 import (
 	"Unison-Elastic-Compute/api/types/control/slave"
 	"Unison-Elastic-Compute/internal/auth"
-	"Unison-Elastic-Compute/pkg/internal/communication/connect/register"
+	register2 "Unison-Elastic-Compute/pkg/internal/communication/api/connect/register"
 	"Unison-Elastic-Compute/pkg/master/internal/slave-controller/slave_control_block"
 	"encoding/json"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net"
 	"time"
 )
@@ -23,14 +23,14 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 	defer func() {
 		if err != nil {
 			_ = c.Close()
-			log.Println(err.Error())
+			logrus.Info(err.Error())
 		}
 	}()
 
 	e := json.NewEncoder(c)
 
 	// Establish Ctrl Communication Hand shake Step 1
-	hs1b := register.EstablishCtrlConnectionHandshakeStep1Body{}
+	hs1b := register2.EstablishCtrlConnectionHandshakeStep1Body{}
 	err = d.Decode(&hs1b)
 	if err != nil {
 		err = ErrEstablishCtrlConnInvalidRequest
@@ -42,8 +42,8 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 	token := auth.GenerateRandomUUID()
 	uuid := auth.GenerateRandomUUID()
 
-	scb := slave_control_block.NewWithCtrl(slave.SlaveStatusWaitingEstablishControlConnection, uuid, token, c, d)
-	scb.UpdateLastHeartbeatTime(time.Now())
+	scb := slave_control_block.NewWithCtrl(slave.StatusWaitingEstablishControlConnection, uuid, token, c, e, d)
+	scb.SetLastHeartbeatTime(time.Now())
 
 	sc.slaveCtrBlkMutex.Lock()
 	sc.slaveCtrBlk[uuid] = scb
@@ -51,7 +51,7 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 
 	// Establish Ctrl Communication Hand shake Step 2
 	localSeq := auth.GenerateRandomInt()
-	hs2b := register.EstablishCtrlConnectionHandshakeStep2Body{
+	hs2b := register2.EstablishCtrlConnectionHandshakeStep2Body{
 		Ack:   hs1b.Seq + 1,
 		Seq:   localSeq,
 		Token: token,
@@ -65,7 +65,7 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 	}
 
 	// Establish Ctrl Communication Hand shake Step 3
-	hs3b := register.EstablishCtrlConnectionHandshakeStep3Body{}
+	hs3b := register2.EstablishCtrlConnectionHandshakeStep3Body{}
 	err = d.Decode(&hs3b)
 	if err != nil {
 		err = ErrEstablishCtrlConnInvalidRequest
@@ -77,8 +77,8 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
-	scb.SetStatus(slave.SlaveStatusWaitingEstablishDataConnection)
-	scb.UpdateLastHeartbeatTime(time.Now())
+	scb.SetStatus(slave.StatusWaitingEstablishDataConnection)
+	scb.SetLastHeartbeatTime(time.Now())
 }
 
 func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) {
@@ -86,14 +86,14 @@ func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) 
 	defer func() {
 		if err != nil {
 			_ = c.Close()
-			log.Println(err.Error())
+			logrus.Info(err.Error())
 		}
 	}()
 
 	e := json.NewEncoder(c)
 
 	// Establish Data Communication Step 1
-	hs1b := register.EstablishDataConnectionHandShakeStep1Body{}
+	hs1b := register2.EstablishDataConnectionHandShakeStep1Body{}
 	err = d.Decode(&hs1b)
 	if err != nil {
 		err = ErrEstablishDataConnInvalidRequest
@@ -115,11 +115,11 @@ func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) 
 	}
 
 	scb.SetDataConn(c)
-	scb.SetDataDecoder(d)
-	scb.UpdateLastHeartbeatTime(time.Now())
+	scb.SetDataEncoderDecoder(e, d)
+	scb.SetLastHeartbeatTime(time.Now())
 
 	// Establish Data Communication Step 2
-	edcs2 := register.EstablishDataConnectionHandShakeStep2Body{}
+	edcs2 := register2.EstablishDataConnectionHandShakeStep2Body{}
 
 	err = e.Encode(&edcs2)
 	if err != nil {
@@ -127,7 +127,8 @@ func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
-	scb.SetStatus(slave.SlaveStatusNormal)
+	scb.SetStatus(slave.StatusNormal)
+	scb.Start()
 }
 
 // TODO: 巡检
