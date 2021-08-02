@@ -16,6 +16,6 @@ func CreateDefaultTestMaster(t *testing.T) *Master {
 	t.Helper()
 	return New(master.CreatMasterBody{
 		SlaveControlListenerPort: "9700",
-		MasterAPIPort:            "9600",
+		APIPort:                  "9600",
 	})
 }

@@ -10,5 +10,5 @@ package master
 type CreatMasterBody struct {
 	SlaveControlListenerPort string
 
-	MasterAPIPort string
+	APIPort string
 }

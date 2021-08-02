@@ -27,7 +27,7 @@ func main() {
 
 	cmb := master2.CreatMasterBody{
 		SlaveControlListenerPort: settings.ConnectSetting.SlaveControlListenerPort,
-		MasterAPIPort:            settings.ApiSetting.MasterAPIPort,
+		APIPort:                  settings.ApiSetting.MasterAPIPort,
 	}
 	m := master.New(cmb)
 

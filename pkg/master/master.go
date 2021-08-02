@@ -9,13 +9,14 @@ type Master struct {
 	slaveController          *slave_controller.SlaveController
 	SlaveControlListenerPort string
 
-	masterAPIPort string
+	httpApiController *HttpApiController
+	APIPort           string
 }
 
 func New(cmb master.CreatMasterBody) *Master {
 	m := &Master{
 		SlaveControlListenerPort: cmb.SlaveControlListenerPort,
-		masterAPIPort:            cmb.MasterAPIPort,
+		APIPort:                  cmb.APIPort,
 	}
 	return m
 }
@@ -29,7 +30,15 @@ func (m *Master) Start() error {
 	}
 	m.slaveController = slaveController
 
+	httpApiController := newHttpApiController(m)
+	m.httpApiController = httpApiController
+
 	m.slaveController.Start()
+	m.httpApiController.startHttpApiServe()
 
 	return nil
+}
+
+func (m *Master) Stop() {
+
 }
