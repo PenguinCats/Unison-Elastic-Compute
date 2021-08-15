@@ -5,24 +5,37 @@
  * @Description: nil
  */
 
-package settings
+package main
 
 import (
 	"github.com/go-ini/ini"
 	"log"
 )
 
+type Host struct {
+	PortBias int
+}
+
+var HostSetting = &Host{}
+
 type Connect struct {
-	SlaveControlListenerPort string
+	MasterIP        string
+	MasterPort      string
+	MasterSecretKey string
 }
 
 var ConnectSetting = &Connect{}
 
-type Api struct {
-	MasterAPIPort string
+type DockerController struct {
+	MemoryReserveRatio          int64
+	StorageReserveRatioForImage int64
+	StoragePoolName             string
+	CoreAvailableList           []string
+	HostPortRange               string
+	ContainerStopTimeout        int
 }
 
-var ApiSetting = &Api{}
+var DockerControllerSetting = &DockerController{}
 
 var cfg *ini.File
 
@@ -33,7 +46,8 @@ func LoadGlobalSetting(configPath string) (err error) {
 	}
 
 	mapTo("connect", ConnectSetting)
-	mapTo("api", ApiSetting)
+	mapTo("docker_controller", DockerControllerSetting)
+	mapTo("host", HostSetting)
 
 	return err
 }

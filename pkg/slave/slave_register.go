@@ -1,13 +1,13 @@
 package slave
 
 import (
-	slave2 "Unison-Elastic-Compute/api/types/control/slave"
-	"Unison-Elastic-Compute/internal/auth"
-	"Unison-Elastic-Compute/internal/network"
-	connect2 "Unison-Elastic-Compute/pkg/internal/communication/api/connect"
-	register2 "Unison-Elastic-Compute/pkg/internal/communication/api/connect/register"
 	"encoding/json"
 	"fmt"
+	slave2 "github.com/PenguinCats/Unison-Elastic-Compute/api/types"
+	"github.com/PenguinCats/Unison-Elastic-Compute/internal/auth"
+	"github.com/PenguinCats/Unison-Elastic-Compute/internal/network"
+	connect2 "github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/connect"
+	register2 "github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/connect/register"
 )
 
 func (slave *Slave) register() error {

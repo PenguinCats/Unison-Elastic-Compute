@@ -1,19 +1,21 @@
 package slave
 
 import (
-	slave2 "Unison-Elastic-Compute/api/types/control/slave"
-	"Unison-Elastic-Compute/pkg/internal/communication/api/control"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/PenguinCats/Unison-Docker-Controller/api/types/docker_controller"
+	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/PenguinCats/Unison-Docker-Controller/pkg/controller"
 )
 
 type Slave struct {
-	status slave2.StatusSlave
+	status types.StatusSlave
 
 	masterIP   string
 	masterPort string
@@ -31,18 +33,28 @@ type Slave struct {
 
 	scbStopFunc context.CancelFunc
 
-	mu sync.Mutex
+	mu sync.RWMutex
 
 	lastHeartbeatTime     time.Time
 	lastHeartbeatTimeLock sync.RWMutex
+
+	dc           *controller.DockerController
+	hostPortBias int
 }
 
-func New(cb slave2.CreatSlaveBody) *Slave {
-	return &Slave{
-		masterIP:   cb.MasterIP,
-		masterPort: cb.MasterPort,
-		secretKey:  cb.MasterSecretKey,
+func NewSlave(cb types.CreatSlaveBody, dccb docker_controller.DockerControllerCreatBody) (*Slave, error) {
+	dc, err := controller.NewDockerController(&dccb)
+	if err != nil {
+		return nil, err
 	}
+
+	return &Slave{
+		masterIP:     cb.MasterIP,
+		masterPort:   cb.MasterPort,
+		secretKey:    cb.MasterSecretKey,
+		dc:           dc,
+		hostPortBias: cb.HostPortBias,
+	}, nil
 }
 
 func (slave *Slave) Start() {
@@ -60,6 +72,20 @@ func (slave *Slave) Start() {
 	//slave.startHeartbeatCheck(ctx)
 }
 
+func (slave *Slave) StopWork() {
+	slave.stopActivity()
+	slave.mu.Lock()
+	slave.status = types.StatusStopped
+	slave.mu.Unlock()
+}
+
+func (slave *Slave) GetStatus() types.StatusSlave {
+	slave.mu.RLock()
+	defer slave.mu.RUnlock()
+
+	return slave.status
+}
+
 func (slave *Slave) stopActivity() {
 	slave.mu.Lock()
 	slave.scbStopFunc()
@@ -71,47 +97,6 @@ func (slave *Slave) stopActivity() {
 func (slave *Slave) offline() {
 	slave.stopActivity()
 	slave.mu.Lock()
-	slave.status = slave2.StatusOffline
+	slave.status = types.StatusOffline
 	slave.mu.Unlock()
-}
-
-func (slave *Slave) StopWork() {
-	slave.stopActivity()
-	slave.mu.Lock()
-	slave.status = slave2.StatusStopped
-	slave.mu.Unlock()
-}
-
-func (slave *Slave) startHandleCtrlMessage(ctx context.Context) {
-	go func() {
-		var err error = nil
-		defer func() {
-			if err != nil {
-				logrus.Warning(err.Error())
-				slave.offline()
-			}
-		}()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				message := control.Message{}
-				err = slave.ctrlDecoder.Decode(&message)
-				if err != nil {
-					err = control.ErrControlInvalidMessage
-					return
-				}
-
-				switch message.MessageType {
-				case control.MessageCtrlTypeHeartbeat:
-					slave.handleHeartbeatMessage(message.Value)
-				default:
-					err = control.ErrControlInvalidMessage
-					return
-				}
-			}
-		}
-	}()
 }

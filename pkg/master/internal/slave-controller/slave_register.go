@@ -8,11 +8,11 @@
 package slave_controller
 
 import (
-	"Unison-Elastic-Compute/api/types/control/slave"
-	"Unison-Elastic-Compute/internal/auth"
-	register2 "Unison-Elastic-Compute/pkg/internal/communication/api/connect/register"
-	"Unison-Elastic-Compute/pkg/master/internal/slave-controller/slave_control_block"
 	"encoding/json"
+	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
+	"github.com/PenguinCats/Unison-Elastic-Compute/internal/auth"
+	register2 "github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/connect/register"
+	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/master/internal/slave-controller/slave_control_block"
 	"github.com/sirupsen/logrus"
 	"net"
 	"time"
@@ -42,7 +42,8 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 	token := auth.GenerateRandomUUID()
 	uuid := auth.GenerateRandomUUID()
 
-	scb := slave_control_block.NewWithCtrl(slave.StatusWaitingEstablishControlConnection, uuid, token, c, e, d)
+	scb := slave_control_block.NewWithCtrl(types.StatusWaitingEstablishControlConnection,
+		uuid, token, c, e, d, sc.redisDAO)
 	scb.SetLastHeartbeatTime(time.Now())
 
 	sc.slaveCtrBlkMutex.Lock()
@@ -77,7 +78,7 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
-	scb.SetStatus(slave.StatusWaitingEstablishDataConnection)
+	scb.SetStatus(types.StatusWaitingEstablishDataConnection)
 	scb.SetLastHeartbeatTime(time.Now())
 }
 
@@ -127,8 +128,6 @@ func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
-	scb.SetStatus(slave.StatusNormal)
+	scb.SetStatus(types.StatusNormal)
 	scb.Start()
 }
-
-// TODO: 巡检

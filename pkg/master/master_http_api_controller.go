@@ -19,7 +19,7 @@ func newHttpApiController(master *Master) *HttpApiController {
 }
 
 func (hac *HttpApiController) startHttpApiServe() {
-	err := hac.r.Run(":" + hac.master.APIPort)
+	err := hac.r.Run(":" + hac.master.apiPort)
 	if err != nil {
 		logrus.Error("HTTP api server are down")
 		hac.master.Stop()

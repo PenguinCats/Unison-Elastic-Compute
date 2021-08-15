@@ -8,9 +8,9 @@
 package slave
 
 import (
-	"Unison-Elastic-Compute/pkg/internal/communication/api/control"
 	"context"
 	"encoding/json"
+	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/control"
 	"github.com/sirupsen/logrus"
 	"time"
 )
@@ -46,7 +46,10 @@ func (slave *Slave) startSendHeartbeat(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			default:
-				m := control.HeartBeatMessageReport{}
+				m := control.HeartBeatMessageReport{
+					Status:   slave.GetStatus(),
+					Resource: *slave.dc.GetResourceAvailable(),
+				}
 				v, err := json.Marshal(&m)
 				if err != nil {
 					logrus.Warning(err.Error())

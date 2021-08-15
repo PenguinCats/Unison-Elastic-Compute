@@ -36,7 +36,7 @@ func TestSlaveRegister(t *testing.T) {
 func TestMultipleSlaveRegister(t *testing.T) {
 	cnt = 0
 
-	times := 1000
+	times := 500
 
 	for i := 0; i < times; i++ {
 		log.Println(i)

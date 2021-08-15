@@ -5,7 +5,7 @@
  * @Description: nil
  */
 
-package slave
+package types
 
 type StatusSlave int
 

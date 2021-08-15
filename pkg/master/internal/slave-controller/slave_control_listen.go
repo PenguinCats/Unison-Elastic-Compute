@@ -8,8 +8,8 @@
 package slave_controller
 
 import (
-	connect2 "Unison-Elastic-Compute/pkg/internal/communication/api/connect"
 	"encoding/json"
+	connect2 "github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/connect"
 	"github.com/sirupsen/logrus"
 	"net"
 )

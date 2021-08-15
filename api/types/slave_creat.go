@@ -5,10 +5,12 @@
  * @Description: nil
  */
 
-package master
+package types
 
-type CreatMasterBody struct {
-	SlaveControlListenerPort string
+type CreatSlaveBody struct {
+	MasterIP        string
+	MasterPort      string
+	MasterSecretKey string
 
-	APIPort string
+	HostPortBias int
 }

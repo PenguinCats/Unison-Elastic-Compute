@@ -1,9 +1,10 @@
 package slave_control_block
 
 import (
-	"Unison-Elastic-Compute/pkg/internal/communication/api/control"
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/control"
 	"github.com/sirupsen/logrus"
 	"time"
 )
@@ -44,6 +45,8 @@ func (scb *SlaveControlBlock) handleHeartbeatMessage(v []byte) {
 		logrus.Warning(control.ErrControlInvalidHeartbeat.Error())
 		return
 	}
+
+	fmt.Println(m)
 
 	scb.sendHeartbeatACK()
 

@@ -8,10 +8,10 @@
 package slave_control_block
 
 import (
-	"Unison-Elastic-Compute/api/types/control/slave"
-	control2 "Unison-Elastic-Compute/pkg/internal/communication/api/control"
 	"context"
 	"encoding/json"
+	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
+	"github.com/PenguinCats/Unison-Elastic-Compute/internal/redis_util"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
@@ -19,7 +19,7 @@ import (
 )
 
 type SlaveControlBlock struct {
-	status slave.StatusSlave
+	status types.StatusSlave
 
 	uuid  string
 	token string
@@ -37,10 +37,12 @@ type SlaveControlBlock struct {
 
 	lastHeartbeatTime     time.Time
 	lastHeartbeatTimeLock sync.RWMutex
+
+	redisDAO *redis_util.RedisDAO
 }
 
-func NewWithCtrl(status slave.StatusSlave, uuid, token string,
-	ctrlConn net.Conn, ctrlEncoder *json.Encoder, ctrlDecoder *json.Decoder) *SlaveControlBlock {
+func NewWithCtrl(status types.StatusSlave, uuid, token string,
+	ctrlConn net.Conn, ctrlEncoder *json.Encoder, ctrlDecoder *json.Decoder, redisDAO *redis_util.RedisDAO) *SlaveControlBlock {
 	return &SlaveControlBlock{
 		status:      status,
 		uuid:        uuid,
@@ -48,16 +50,17 @@ func NewWithCtrl(status slave.StatusSlave, uuid, token string,
 		ctrlConn:    ctrlConn,
 		ctrlEncoder: ctrlEncoder,
 		ctrlDecoder: ctrlDecoder,
+		redisDAO:    redisDAO,
 	}
 }
 
-func (scb *SlaveControlBlock) SetStatus(statusSlave slave.StatusSlave) {
+func (scb *SlaveControlBlock) SetStatus(statusSlave types.StatusSlave) {
 	scb.mu.Lock()
 	scb.status = statusSlave
 	scb.mu.Unlock()
 }
 
-func (scb *SlaveControlBlock) GetStatus() slave.StatusSlave {
+func (scb *SlaveControlBlock) GetStatus() types.StatusSlave {
 	scb.mu.RLock()
 	defer scb.mu.RUnlock()
 	return scb.status
@@ -111,7 +114,15 @@ func (scb *SlaveControlBlock) Start() {
 	scb.mu.Unlock()
 
 	scb.startHandleCtrlMessage(ctx)
-	//scb.startHeartbeatCheck(ctx)
+	scb.startHeartbeatCheck(ctx)
+}
+
+func (scb *SlaveControlBlock) StopWork() {
+	scb.stopActivity()
+	scb.mu.Lock()
+	scb.status = types.StatusStopped
+	scb.mu.Unlock()
+	logrus.Warningf("slave [%s] stop", scb.GetUUID())
 }
 
 func (scb *SlaveControlBlock) stopActivity() {
@@ -125,49 +136,7 @@ func (scb *SlaveControlBlock) stopActivity() {
 func (scb *SlaveControlBlock) offline() {
 	scb.stopActivity()
 	scb.mu.Lock()
-	scb.status = slave.StatusOffline
+	scb.status = types.StatusOffline
 	scb.mu.Unlock()
 	logrus.Warningf("slave [%s] offline", scb.GetUUID())
-}
-
-func (scb *SlaveControlBlock) StopWork() {
-	scb.stopActivity()
-	scb.mu.Lock()
-	scb.status = slave.StatusStopped
-	scb.mu.Unlock()
-	logrus.Warningf("slave [%s] stop", scb.GetUUID())
-}
-
-func (scb *SlaveControlBlock) startHandleCtrlMessage(ctx context.Context) {
-	go func() {
-		var err error = nil
-		defer func() {
-			if err != nil {
-				logrus.Warning(err.Error())
-				scb.offline()
-			}
-		}()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				message := control2.Message{}
-				err = scb.ctrlDecoder.Decode(&message)
-				if err != nil {
-					err = control2.ErrControlInvalidMessage
-					return
-				}
-
-				switch message.MessageType {
-				case control2.MessageCtrlTypeHeartbeat:
-					scb.handleHeartbeatMessage(message.Value)
-				default:
-					err = control2.ErrControlInvalidMessage
-					return
-				}
-			}
-		}
-	}()
 }

@@ -8,7 +8,8 @@
 package slave
 
 import (
-	slave2 "Unison-Elastic-Compute/api/types/control/slave"
+	"github.com/PenguinCats/Unison-Docker-Controller/api/types/docker_controller"
+	slave2 "github.com/PenguinCats/Unison-Elastic-Compute/api/types"
 	"testing"
 )
 
@@ -19,5 +20,18 @@ func CreateDefaultTestSlave(t *testing.T) *Slave {
 		MasterPort:      "9700",
 		MasterSecretKey: "1234567890abcde",
 	}
-	return New(cb)
+
+	slave, err := NewSlave(cb, docker_controller.DockerControllerCreatBody{
+		MemoryReserveRatio:          5,
+		StorageReserveRatioForImage: 10,
+		StoragePoolName:             "docker-thinpool",
+		CoreAvailableList:           []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"},
+		HostPortRange:               "14000-15000",
+		ContainerStopTimeout:        5,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: [%s]", err.Error())
+	}
+
+	return slave
 }

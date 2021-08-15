@@ -8,12 +8,10 @@
 package main
 
 import (
-	master2 "Unison-Elastic-Compute/api/types/control/master"
-	"Unison-Elastic-Compute/cmd/master/internal/settings"
-	"Unison-Elastic-Compute/pkg/master"
+	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
+	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/master"
 	nested "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 func main() {
@@ -21,21 +19,27 @@ func main() {
 		ShowFullLevel: true,
 	})
 
-	if err := settings.LoadGlobalSetting("cmd/master/conf.ini"); err != nil {
-
+	if err := LoadGlobalSetting("cmd/master/master_start/master.ini"); err != nil {
+		panic(err.Error())
 	}
 
-	cmb := master2.CreatMasterBody{
-		SlaveControlListenerPort: settings.ConnectSetting.SlaveControlListenerPort,
-		APIPort:                  settings.ApiSetting.MasterAPIPort,
+	cmb := types.CreatMasterBody{
+		Recovery:                 GeneralSetting.Recovery,
+		SlaveControlListenerPort: ConnectSetting.SlaveControlListenerPort,
+		APIPort:                  ApiSetting.MasterAPIPort,
+		RedisHost:                RedisSetting.RedisHost,
+		RedisPort:                RedisSetting.RedisPort,
+		RedisPassword:            RedisSetting.RedisPassword,
+		RedisDB:                  RedisSetting.RedisDB,
 	}
-	m := master.New(cmb)
+	m, err := master.New(cmb)
+	if err != nil {
+		panic(err.Error())
+	}
 
 	if err := m.Start(); err != nil {
 		panic(err.Error())
 	}
-
-	time.Sleep(time.Second * 5)
 
 	ch := make(chan bool, 1)
 	<-ch
