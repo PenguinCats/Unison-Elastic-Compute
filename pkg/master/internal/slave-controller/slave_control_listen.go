@@ -9,7 +9,7 @@ package slave_controller
 
 import (
 	"encoding/json"
-	connect2 "github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/connect"
+	connect2 "github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/internal_connect_types"
 	"github.com/sirupsen/logrus"
 	"net"
 )

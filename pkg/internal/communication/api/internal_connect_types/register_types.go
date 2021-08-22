@@ -5,7 +5,7 @@
  * @Description: nil
  */
 
-package register
+package internal_connect_types
 
 type EstablishCtrlConnectionHandshakeStep1Body struct {
 	SecretKey string `json:"secret_key"`

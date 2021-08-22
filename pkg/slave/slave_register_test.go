@@ -31,12 +31,14 @@ func TestSlaveRegister(t *testing.T) {
 	if err != nil {
 		t.Fatalf("slave register failed, err message: %s", err.Error())
 	}
+
+	time.Sleep(time.Second * 3)
 }
 
 func TestMultipleSlaveRegister(t *testing.T) {
 	cnt = 0
 
-	times := 500
+	times := 50
 
 	for i := 0; i < times; i++ {
 		log.Println(i)

@@ -1,11 +1,11 @@
 /**
- * @File: connect
+ * @File: internal_connect_types
  * @Date: 2021/7/24 下午9:31
  * @Author: Binjie Zhang (bj_zhang@seu.edu.cn)
  * @Description: nil
  */
 
-package connect
+package internal_connect_types
 
 type ConnectionType int
 

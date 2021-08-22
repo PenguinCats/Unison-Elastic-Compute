@@ -10,53 +10,53 @@ package slave
 import (
 	"context"
 	"encoding/json"
-	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/control"
+	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/internal_control_types"
 	"github.com/sirupsen/logrus"
 	"time"
 )
 
-func (slave *Slave) setLastHeartbeatTime(t time.Time) {
-	slave.lastHeartbeatTimeLock.Lock()
-	slave.lastHeartbeatTime = t
-	slave.lastHeartbeatTimeLock.Unlock()
+func (s *Slave) setLastHeartbeatTime(t time.Time) {
+	s.lastHeartbeatTimeLock.Lock()
+	s.lastHeartbeatTime = t
+	s.lastHeartbeatTimeLock.Unlock()
 }
 
-func (slave *Slave) GetLastHeartbeatTime() (t time.Time) {
-	slave.lastHeartbeatTimeLock.RLock()
-	t = slave.lastHeartbeatTime
-	slave.lastHeartbeatTimeLock.RUnlock()
+func (s *Slave) GetLastHeartbeatTime() (t time.Time) {
+	s.lastHeartbeatTimeLock.RLock()
+	t = s.lastHeartbeatTime
+	s.lastHeartbeatTimeLock.RUnlock()
 	return
 }
 
-func (slave *Slave) handleHeartbeatMessage(v []byte) {
-	m := control.HeartBeatMessageAck{}
+func (s *Slave) handleHeartbeatMessage(v []byte) {
+	m := internal_control_types.HeartBeatMessageAck{}
 	err := json.Unmarshal(v, &m)
 	if err != nil {
-		logrus.Warning(control.ErrControlInvalidHeartbeat.Error())
+		logrus.Warning(internal_control_types.ErrControlInvalidHeartbeat.Error())
 		return
 	}
 
-	slave.setLastHeartbeatTime(time.Now())
+	s.setLastHeartbeatTime(time.Now())
 }
 
-func (slave *Slave) startSendHeartbeat(ctx context.Context) {
+func (s *Slave) startSendHeartbeat(ctx context.Context) {
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			default:
-				m := control.HeartBeatMessageReport{
-					Status:   slave.GetStatus(),
-					Resource: *slave.dc.GetResourceAvailable(),
+				m := internal_control_types.HeartBeatMessageReport{
+					Status:   s.GetStatus(),
+					Resource: *s.dc.GetResourceAvailable(),
 				}
 				v, err := json.Marshal(&m)
 				if err != nil {
 					logrus.Warning(err.Error())
 				}
 
-				err = slave.ctrlEncoder.Encode(&control.Message{
-					MessageType: control.MessageCtrlTypeHeartbeat,
+				err = s.ctrlEncoder.Encode(&internal_control_types.Message{
+					MessageType: internal_control_types.MessageCtrlTypeHeartbeat,
 					Value:       v,
 				})
 				if err != nil {
@@ -68,7 +68,7 @@ func (slave *Slave) startSendHeartbeat(ctx context.Context) {
 	}()
 }
 
-func (slave *Slave) startHeartbeatCheck(ctx context.Context) {
+func (s *Slave) startHeartbeatCheck(ctx context.Context) {
 	go func() {
 		for {
 			select {
@@ -76,9 +76,9 @@ func (slave *Slave) startHeartbeatCheck(ctx context.Context) {
 				return
 			default:
 				time.Sleep(time.Second * 30)
-				lastHeartBeatTime := slave.GetLastHeartbeatTime()
+				lastHeartBeatTime := s.GetLastHeartbeatTime()
 				if time.Now().Sub(lastHeartBeatTime) > time.Minute*3 {
-					slave.offline()
+					s.offline()
 					return
 				}
 			}

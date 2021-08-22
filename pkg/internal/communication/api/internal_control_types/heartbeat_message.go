@@ -1,4 +1,4 @@
-package control
+package internal_control_types
 
 import (
 	"github.com/PenguinCats/Unison-Docker-Controller/api/types/resource"

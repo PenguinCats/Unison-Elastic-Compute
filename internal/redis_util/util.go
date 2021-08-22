@@ -29,7 +29,6 @@ func newRedisPool(host, port, password, db string) *redis.Pool {
 			}
 			return c, nil
 		},
-		DialContext:     nil,
 		MaxIdle:         20,
 		IdleTimeout:     time.Minute * 3,
 		Wait:            true,

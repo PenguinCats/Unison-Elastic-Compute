@@ -1,4 +1,4 @@
-package data
+package internal_data_types
 
 type MessageDataType int
 

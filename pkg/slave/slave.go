@@ -57,46 +57,49 @@ func NewSlave(cb types.CreatSlaveBody, dccb docker_controller.DockerControllerCr
 	}, nil
 }
 
-func (slave *Slave) Start() {
-	err := slave.register()
+func (s *Slave) Start() {
+	err := s.register()
 	if err != nil {
 		panic(fmt.Sprintf("Slave Start Error with [%s]", err.Error()))
 	}
 	logrus.Warning("register success")
 
 	ctx, cancel := context.WithCancel(context.Background())
-	slave.scbStopFunc = cancel
+	s.scbStopFunc = cancel
 
-	slave.startHandleCtrlMessage(ctx)
-	slave.startSendHeartbeat(ctx)
+	s.startHandleCtrlMessage(ctx)
+	s.startSendHeartbeat(ctx)
+	// TODO do heartbeat check
 	//slave.startHeartbeatCheck(ctx)
+
+	s.startHandleDataMessage(ctx)
 }
 
-func (slave *Slave) StopWork() {
-	slave.stopActivity()
-	slave.mu.Lock()
-	slave.status = types.StatusStopped
-	slave.mu.Unlock()
+func (s *Slave) StopWork() {
+	s.stopActivity()
+	s.mu.Lock()
+	s.status = types.StatusStopped
+	s.mu.Unlock()
 }
 
-func (slave *Slave) GetStatus() types.StatusSlave {
-	slave.mu.RLock()
-	defer slave.mu.RUnlock()
+func (s *Slave) GetStatus() types.StatusSlave {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	return slave.status
+	return s.status
 }
 
-func (slave *Slave) stopActivity() {
-	slave.mu.Lock()
-	slave.scbStopFunc()
-	_ = slave.ctrlConn.Close()
-	_ = slave.dataConn.Close()
-	slave.mu.Unlock()
+func (s *Slave) stopActivity() {
+	s.mu.Lock()
+	s.scbStopFunc()
+	_ = s.ctrlConn.Close()
+	_ = s.dataConn.Close()
+	s.mu.Unlock()
 }
 
-func (slave *Slave) offline() {
-	slave.stopActivity()
-	slave.mu.Lock()
-	slave.status = types.StatusOffline
-	slave.mu.Unlock()
+func (s *Slave) offline() {
+	s.stopActivity()
+	s.mu.Lock()
+	s.status = types.StatusOffline
+	s.mu.Unlock()
 }

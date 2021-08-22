@@ -10,15 +10,15 @@ package slave_controller
 import "errors"
 
 var (
-	ErrListenerCreat = errors.New("create slave control listener fail")
+	ErrListenerCreat = errors.New("create slave internal_control_types listener fail")
 
 	ErrSlaveControllerCreat = errors.New("create slave controller fail")
 
-	ErrInvalidConnectionRequest = errors.New("invalid connect request")
+	ErrInvalidConnectionRequest = errors.New("invalid internal_connect_types request")
 
-	ErrEstablishCtrlConnInvalidRequest = errors.New("invalid establish ctrl connect request")
-	ErrEstablishCtrlConnStepFail       = errors.New("establish ctrl connect step fail")
+	ErrEstablishCtrlConnInvalidRequest = errors.New("invalid establish ctrl internal_connect_types request")
+	ErrEstablishCtrlConnStepFail       = errors.New("establish ctrl internal_connect_types step fail")
 
-	ErrEstablishDataConnInvalidRequest = errors.New("invalid establish data connect request")
-	ErrEstablishDataConnStepFail       = errors.New("establish data connect step fail")
+	ErrEstablishDataConnInvalidRequest = errors.New("invalid establish internal_data_types internal_connect_types request")
+	ErrEstablishDataConnStepFail       = errors.New("establish internal_data_types internal_connect_types step fail")
 )

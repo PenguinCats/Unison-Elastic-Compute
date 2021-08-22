@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
 	"github.com/PenguinCats/Unison-Elastic-Compute/internal/auth"
-	register2 "github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/connect/register"
+	register2 "github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/internal_connect_types"
 	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/master/internal/slave-controller/slave_control_block"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -43,7 +43,7 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 	uuid := auth.GenerateRandomUUID()
 
 	scb := slave_control_block.NewWithCtrl(types.StatusWaitingEstablishControlConnection,
-		uuid, token, c, e, d, sc.redisDAO)
+		uuid, token, c, e, d, sc.operationResponseChan)
 	scb.SetLastHeartbeatTime(time.Now())
 
 	sc.slaveCtrBlkMutex.Lock()

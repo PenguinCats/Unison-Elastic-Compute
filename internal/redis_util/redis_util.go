@@ -35,7 +35,7 @@ func (t *RedisDAO) TestConnection() error {
 		return err
 	}
 	if v != "PONG" {
-		return errors.New("redis connect fail")
+		return errors.New("redis internal_connect_types fail")
 	}
 
 	return nil

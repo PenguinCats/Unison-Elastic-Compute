@@ -1,4 +1,4 @@
-package control
+package internal_control_types
 
 import "errors"
 

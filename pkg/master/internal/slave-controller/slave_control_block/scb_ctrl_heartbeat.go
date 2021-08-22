@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/control"
+	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/internal_control_types"
 	"github.com/sirupsen/logrus"
 	"time"
 )
@@ -23,14 +23,14 @@ func (scb *SlaveControlBlock) GetLastHeartbeatTime() (t time.Time) {
 }
 
 func (scb *SlaveControlBlock) sendHeartbeatACK() {
-	m := control.HeartBeatMessageAck{}
+	m := internal_control_types.HeartBeatMessageAck{}
 	v, err := json.Marshal(&m)
 	if err != nil {
 		logrus.Warning(err.Error())
 	}
 
-	err = scb.ctrlEncoder.Encode(&control.Message{
-		MessageType: control.MessageCtrlTypeHeartbeat,
+	err = scb.ctrlEncoder.Encode(&internal_control_types.Message{
+		MessageType: internal_control_types.MessageCtrlTypeHeartbeat,
 		Value:       v,
 	})
 	if err != nil {
@@ -39,10 +39,10 @@ func (scb *SlaveControlBlock) sendHeartbeatACK() {
 }
 
 func (scb *SlaveControlBlock) handleHeartbeatMessage(v []byte) {
-	m := control.HeartBeatMessageReport{}
+	m := internal_control_types.HeartBeatMessageReport{}
 	err := json.Unmarshal(v, &m)
 	if err != nil {
-		logrus.Warning(control.ErrControlInvalidHeartbeat.Error())
+		logrus.Warning(internal_control_types.ErrControlInvalidHeartbeat.Error())
 		return
 	}
 

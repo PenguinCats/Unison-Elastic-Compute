@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/PenguinCats/Unison-Docker-Controller/api/types/docker_controller"
 	slave3 "github.com/PenguinCats/Unison-Elastic-Compute/api/types"
 	slave2 "github.com/PenguinCats/Unison-Elastic-Compute/pkg/slave"
@@ -33,5 +32,8 @@ func main() {
 		ContainerStopTimeout:        DockerControllerSetting.ContainerStopTimeout,
 	})
 
-	fmt.Println(slave)
+	slave.Start()
+
+	ch := make(chan bool, 1)
+	<-ch
 }

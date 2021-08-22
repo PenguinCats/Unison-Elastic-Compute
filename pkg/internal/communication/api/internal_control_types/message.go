@@ -5,7 +5,7 @@
  * @Description: nil
  */
 
-package control
+package internal_control_types
 
 type MessageCtrlType int
 

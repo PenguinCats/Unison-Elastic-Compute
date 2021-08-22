@@ -11,7 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
-	"github.com/PenguinCats/Unison-Elastic-Compute/internal/redis_util"
+	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/master/internal/operation"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
@@ -38,19 +38,21 @@ type SlaveControlBlock struct {
 	lastHeartbeatTime     time.Time
 	lastHeartbeatTimeLock sync.RWMutex
 
-	redisDAO *redis_util.RedisDAO
+	operationResponseChan chan *operation.OperationResponse
 }
 
 func NewWithCtrl(status types.StatusSlave, uuid, token string,
-	ctrlConn net.Conn, ctrlEncoder *json.Encoder, ctrlDecoder *json.Decoder, redisDAO *redis_util.RedisDAO) *SlaveControlBlock {
+	ctrlConn net.Conn, ctrlEncoder *json.Encoder, ctrlDecoder *json.Decoder,
+	operationResponseChan chan *operation.OperationResponse) *SlaveControlBlock {
+
 	return &SlaveControlBlock{
-		status:      status,
-		uuid:        uuid,
-		token:       token,
-		ctrlConn:    ctrlConn,
-		ctrlEncoder: ctrlEncoder,
-		ctrlDecoder: ctrlDecoder,
-		redisDAO:    redisDAO,
+		status:                status,
+		uuid:                  uuid,
+		token:                 token,
+		ctrlConn:              ctrlConn,
+		ctrlEncoder:           ctrlEncoder,
+		ctrlDecoder:           ctrlDecoder,
+		operationResponseChan: operationResponseChan,
 	}
 }
 
@@ -105,7 +107,7 @@ func (scb *SlaveControlBlock) SetDataEncoderDecoder(e *json.Encoder, d *json.Dec
 }
 
 func (scb *SlaveControlBlock) Start() {
-	logrus.Warning("new slave joined")
+	logrus.Warningf("new slave [%s] joined", scb.GetUUID())
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -114,6 +116,7 @@ func (scb *SlaveControlBlock) Start() {
 	scb.mu.Unlock()
 
 	scb.startHandleCtrlMessage(ctx)
+	scb.startHandleDataMessage(ctx)
 	scb.startHeartbeatCheck(ctx)
 }
 
