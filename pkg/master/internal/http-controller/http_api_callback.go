@@ -16,6 +16,6 @@ var (
 func SendCallback(callbackURL string, data []byte) {
 	_, err := client.Post(callbackURL, "application/json", bytes.NewBuffer(data))
 	if err != nil {
-		logrus.Warningf("send callback message fail with [%s]", callbackURL)
+		logrus.Warningf("send callback message fail with [%s]", err.Error())
 	}
 }
