@@ -8,6 +8,8 @@ const (
 
 	SLAVE_INVALID               = 5001
 	SLAVE_INSUFFICIENT_RESOURCE = 5002
+
+	CONTAINER_IS_BUSY = 6001
 )
 
 var MsgFlags = map[int]string{
@@ -18,6 +20,8 @@ var MsgFlags = map[int]string{
 
 	SLAVE_INVALID:               "设备机不可用",
 	SLAVE_INSUFFICIENT_RESOURCE: "设备机资源不足",
+
+	CONTAINER_IS_BUSY: "该容器正在进行其他操作",
 }
 
 // GetMsg get error information based on Code

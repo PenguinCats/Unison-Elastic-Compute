@@ -10,7 +10,7 @@ package internal_control_types
 type MessageCtrlType int
 
 const (
-	MessageCtrlTypeHeartbeat MessageCtrlType = iota
+	MessageCtrlTypeHeartbeat MessageCtrlType = iota + 1
 	MessageCtrlTypeError
 )
 

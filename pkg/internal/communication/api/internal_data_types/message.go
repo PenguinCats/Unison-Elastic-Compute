@@ -3,7 +3,7 @@ package internal_data_types
 type MessageDataType int
 
 const (
-	MessageDataTypeContainerCreate MessageDataType = iota
+	MessageDataTypeContainerCreate MessageDataType = iota + 1
 	MessageDataTypeContainerStart
 	MessageDataTypeContainerStop
 	MessageDataTypeContainerRemove

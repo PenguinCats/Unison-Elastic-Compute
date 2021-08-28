@@ -68,11 +68,14 @@ func (s *Slave) Start() {
 	s.scbStopFunc = cancel
 
 	s.startHandleCtrlMessage(ctx)
-	s.startSendHeartbeat(ctx)
+	s.startHandleDataMessage(ctx)
+
+	time.Sleep(time.Second)
+
 	// TODO do heartbeat check
+	s.startSendHeartbeat(ctx)
 	//slave.startHeartbeatCheck(ctx)
 
-	s.startHandleDataMessage(ctx)
 }
 
 func (s *Slave) StopWork() {

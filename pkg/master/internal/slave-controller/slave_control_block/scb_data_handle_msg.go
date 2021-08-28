@@ -25,7 +25,7 @@ func (scb *SlaveControlBlock) startHandleDataMessage(ctx context.Context) {
 				return
 			default:
 				message := internal_data_types.Message{}
-				err = scb.ctrlDecoder.Decode(&message)
+				err = scb.dataDecoder.Decode(&message)
 				if err != nil {
 					logrus.Warning(internal_data_types.ErrDataInvalidMessage.Error())
 					err = types.ErrInternalError
@@ -37,6 +37,10 @@ func (scb *SlaveControlBlock) startHandleDataMessage(ctx context.Context) {
 					go scb.handleContainerCreateResponse(message.Value)
 				case internal_data_types.MessageDataTypeContainerStart:
 					go scb.handleContainerStartResponse(message.Value)
+				case internal_data_types.MessageDataTypeContainerStop:
+					go scb.handleContainerStopResponse(message.Value)
+				case internal_data_types.MessageDataTypeContainerRemove:
+					go scb.handleContainerRemoveResponse(message.Value)
 				default:
 					logrus.Warning(internal_data_types.ErrDataInvalidMessage.Error())
 					err = types.ErrInternalError
@@ -77,6 +81,42 @@ func (scb *SlaveControlBlock) handleContainerStartResponse(v []byte) {
 	scb.operationResponseChan <- &operation.OperationResponse{
 		OperationID: m.OperationID,
 		OperationResponseBody: operation.OperationContainerStartResponse{
+			OperationID:    m.OperationID,
+			Error:          m.Error,
+			UECContainerID: m.ExtContainerID,
+		},
+	}
+}
+
+func (scb *SlaveControlBlock) handleContainerStopResponse(v []byte) {
+	m := internal_data_types.ContainerStopResponse{}
+	err := json.Unmarshal(v, &m)
+	if err != nil {
+		logrus.Warning(internal_data_types.ErrDataInvalidContainerStopMessage.Error())
+		return
+	}
+
+	scb.operationResponseChan <- &operation.OperationResponse{
+		OperationID: m.OperationID,
+		OperationResponseBody: operation.OperationContainerStopResponse{
+			OperationID:    m.OperationID,
+			Error:          m.Error,
+			UECContainerID: m.ExtContainerID,
+		},
+	}
+}
+
+func (scb *SlaveControlBlock) handleContainerRemoveResponse(v []byte) {
+	m := internal_data_types.ContainerRemoveResponse{}
+	err := json.Unmarshal(v, &m)
+	if err != nil {
+		logrus.Warning(internal_data_types.ErrDataInvalidContainerRemoveMessage.Error())
+		return
+	}
+
+	scb.operationResponseChan <- &operation.OperationResponse{
+		OperationID: m.OperationID,
+		OperationResponseBody: operation.OperationContainerRemoveResponse{
 			OperationID:    m.OperationID,
 			Error:          m.Error,
 			UECContainerID: m.ExtContainerID,

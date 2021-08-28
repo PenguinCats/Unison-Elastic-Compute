@@ -13,6 +13,8 @@ func (m *Master) handleOperationContainerCreateTask(task operation.OperationCont
 	var errCode = types.SUCCESS
 	defer func() {
 		if errCode != types.SUCCESS {
+			m.redisDAO.ContainerDelAll(task.ContainerCreateMessage.CCB.ExtContainerID)
+
 			oprInfo := operation.OprInfoUtil.GetOptInfo(task.OperationID)
 			resp := types.APIContainerCreateResponse{
 				APIResponseBase: types.APIResponseBase{
@@ -34,11 +36,20 @@ func (m *Master) handleOperationContainerCreateTask(task operation.OperationCont
 		}
 	}()
 
+	if !m.redisDAO.ContainerSetBusy(task.ContainerCreateMessage.CCB.ExtContainerID) {
+		errCode = types.CONTAINER_IS_BUSY
+		return
+	}
+
 	scb, ok := m.slaveController.GetSlaveCtrlBlk(task.SlaveID)
 	if !ok {
 		errCode = types.SLAVE_INVALID
 		return
 	}
+
+	_ = m.redisDAO.ContainerSet(task.ContainerCreateMessage.CCB.ExtContainerID, "slave_ID", task.SlaveID)
+	_ = m.redisDAO.ContainerHSetWithTime(task.ContainerCreateMessage.CCB.ExtContainerID, "status",
+		"status", "creating", 300)
 
 	err := scb.SendDataContainerCreateMsg(task.ContainerCreateMessage)
 	if err != nil {
@@ -52,6 +63,8 @@ func (m *Master) handleOperationContainerCreateResponse(resp operation.Operation
 
 	var errCode = types.SUCCESS
 	if resp.Error != nil {
+		m.redisDAO.ContainerDelAll(resp.UECContainerID)
+
 		switch resp.Error {
 		case types2.ErrInternalError:
 			errCode = types.ERROR
@@ -79,7 +92,11 @@ func (m *Master) handleOperationContainerCreateResponse(resp operation.Operation
 		response.ExposedTCPMappingPorts = resp.Profile.ExposedTCPMappingPorts
 		response.ExposedUDPPorts = resp.Profile.ExposedUDPPorts
 		response.ExposedUDPMappingPorts = resp.Profile.ExposedUDPMappingPorts
+
+		_ = m.redisDAO.ContainerSetProfile(resp.UECContainerID, resp.Profile)
 	}
+
+	m.redisDAO.ContainerReleaseBusy(resp.UECContainerID)
 
 	sendDataByte, jsonErr := json.Marshal(response)
 	if jsonErr != nil {
@@ -93,6 +110,10 @@ func (m *Master) handleOperationContainerStartTask(task operation.OperationConta
 	var errCode = types.SUCCESS
 	defer func() {
 		if errCode != types.SUCCESS {
+			_ = m.redisDAO.ContainerHSetWithTime(task.ExtContainerID, "status",
+				"status", "error", 300)
+			m.redisDAO.ContainerReleaseBusy(task.ExtContainerID)
+
 			oprInfo := operation.OprInfoUtil.GetOptInfo(task.OperationID)
 			resp := types.APIContainerStartResponse{
 				APIResponseBase: types.APIResponseBase{
@@ -110,11 +131,18 @@ func (m *Master) handleOperationContainerStartTask(task operation.OperationConta
 		}
 	}()
 
+	if !m.redisDAO.ContainerSetBusy(task.ExtContainerID) {
+		errCode = types.CONTAINER_IS_BUSY
+		return
+	}
+
 	scb, ok := m.slaveController.GetSlaveCtrlBlk(task.SlaveID)
 	if !ok {
 		errCode = types.SLAVE_INVALID
 		return
 	}
+	_ = m.redisDAO.ContainerHSetWithTime(task.ExtContainerID, "status",
+		"status", "starting", 300)
 
 	err := scb.SendDataContainerStartMsg(task.ContainerStartMessage)
 	if err != nil {
@@ -128,6 +156,9 @@ func (m *Master) handleOperationContainerStartResponse(resp operation.OperationC
 
 	var errCode = types.SUCCESS
 	if resp.Error != nil {
+		_ = m.redisDAO.ContainerHSetWithTime(resp.UECContainerID, "status",
+			"status", "error", 300)
+
 		switch resp.Error {
 		case types2.ErrInternalError:
 			errCode = types.ERROR
@@ -137,6 +168,11 @@ func (m *Master) handleOperationContainerStartResponse(resp operation.OperationC
 			errCode = types.UNKNOWN_ERROR
 		}
 	}
+
+	_ = m.redisDAO.ContainerHSetWithTime(resp.UECContainerID, "status",
+		"status", "running", 300)
+
+	m.redisDAO.ContainerReleaseBusy(resp.UECContainerID)
 
 	response := types.APIContainerStartResponse{
 		APIResponseBase: types.APIResponseBase{
@@ -158,6 +194,10 @@ func (m *Master) handleOperationContainerStopTask(task operation.OperationContai
 	var errCode = types.SUCCESS
 	defer func() {
 		if errCode != types.SUCCESS {
+			_ = m.redisDAO.ContainerHSetWithTime(task.ExtContainerID, "status",
+				"stopping", "error", 300)
+			m.redisDAO.ContainerReleaseBusy(task.ExtContainerID)
+
 			oprInfo := operation.OprInfoUtil.GetOptInfo(task.OperationID)
 			resp := types.APIContainerStopResponse{
 				APIResponseBase: types.APIResponseBase{
@@ -175,12 +215,19 @@ func (m *Master) handleOperationContainerStopTask(task operation.OperationContai
 		}
 	}()
 
+	if !m.redisDAO.ContainerSetBusy(task.ExtContainerID) {
+		errCode = types.CONTAINER_IS_BUSY
+		return
+	}
+
 	scb, ok := m.slaveController.GetSlaveCtrlBlk(task.SlaveID)
 	if !ok {
 		errCode = types.SLAVE_INVALID
 		return
 	}
 
+	_ = m.redisDAO.ContainerHSetWithTime(task.ExtContainerID, "status",
+		"stopping", "error", 300)
 	err := scb.SendDataContainerStopMsg(task.ContainerStopMessage)
 	if err != nil {
 		errCode = types.ERROR
@@ -199,7 +246,14 @@ func (m *Master) handleOperationContainerStopResponse(resp operation.OperationCo
 		default:
 			errCode = types.UNKNOWN_ERROR
 		}
+		_ = m.redisDAO.ContainerHSetWithTime(resp.UECContainerID, "status",
+			"status", "error", 300)
 	}
+
+	_ = m.redisDAO.ContainerHSetWithTime(resp.UECContainerID, "status",
+		"status", "exited", 300)
+
+	m.redisDAO.ContainerReleaseBusy(resp.UECContainerID)
 
 	response := types.APIContainerStopResponse{
 		APIResponseBase: types.APIResponseBase{
@@ -221,6 +275,10 @@ func (m *Master) handleOperationContainerRemoveTask(task operation.OperationCont
 	var errCode = types.SUCCESS
 	defer func() {
 		if errCode != types.SUCCESS {
+			_ = m.redisDAO.ContainerHSetWithTime(task.ExtContainerID, "status",
+				"stopping", "error", 300)
+			m.redisDAO.ContainerReleaseBusy(task.ExtContainerID)
+
 			oprInfo := operation.OprInfoUtil.GetOptInfo(task.OperationID)
 			resp := types.APIContainerRemoveResponse{
 				APIResponseBase: types.APIResponseBase{
@@ -238,12 +296,19 @@ func (m *Master) handleOperationContainerRemoveTask(task operation.OperationCont
 		}
 	}()
 
+	if !m.redisDAO.ContainerSetBusy(task.ExtContainerID) {
+		errCode = types.CONTAINER_IS_BUSY
+		return
+	}
+
 	scb, ok := m.slaveController.GetSlaveCtrlBlk(task.SlaveID)
 	if !ok {
 		errCode = types.SLAVE_INVALID
 		return
 	}
 
+	_ = m.redisDAO.ContainerHSetWithTime(task.ExtContainerID, "status",
+		"removing", "error", 300)
 	err := scb.SendDataContainerRemoveMsg(task.ContainerRemoveMessage)
 	if err != nil {
 		errCode = types.ERROR
@@ -262,7 +327,11 @@ func (m *Master) handleOperationContainerRemoveResponse(resp operation.Operation
 		default:
 			errCode = types.UNKNOWN_ERROR
 		}
+		_ = m.redisDAO.ContainerHSetWithTime(resp.UECContainerID, "status",
+			"status", "error", 300)
 	}
+
+	m.redisDAO.ContainerDelAll(resp.UECContainerID)
 
 	response := types.APIContainerRemoveResponse{
 		APIResponseBase: types.APIResponseBase{
