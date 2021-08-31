@@ -16,6 +16,21 @@ type RedisDAO struct {
 	pool *redis.Pool
 }
 
+//var (
+//	rao *RedisDAO
+//)
+//
+//func Init(host, port, password, db string) error {
+//	rao = &RedisDAO{
+//		pool: newRedisPool(host, port, password, db),
+//	}
+//	if err := rao.TestConnection(); err != nil {
+//		return err
+//	}
+//
+//	return nil
+//}
+
 func New(host, port, password, db string) (*RedisDAO, error) {
 	r := &RedisDAO{
 		pool: newRedisPool(host, port, password, db),

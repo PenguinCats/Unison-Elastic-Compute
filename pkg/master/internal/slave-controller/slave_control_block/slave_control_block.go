@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
+	"github.com/PenguinCats/Unison-Elastic-Compute/internal/redis_util"
 	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/master/internal/operation"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -39,11 +40,12 @@ type SlaveControlBlock struct {
 	lastHeartbeatTimeLock sync.RWMutex
 
 	operationResponseChan chan *operation.OperationResponse
+	RedisDAO              *redis_util.RedisDAO
 }
 
 func NewWithCtrl(status types.StatusSlave, uuid, token string,
 	ctrlConn net.Conn, ctrlEncoder *json.Encoder, ctrlDecoder *json.Decoder,
-	operationResponseChan chan *operation.OperationResponse) *SlaveControlBlock {
+	operationResponseChan chan *operation.OperationResponse, redisDAO *redis_util.RedisDAO) *SlaveControlBlock {
 
 	return &SlaveControlBlock{
 		status:                status,
@@ -53,6 +55,7 @@ func NewWithCtrl(status types.StatusSlave, uuid, token string,
 		ctrlEncoder:           ctrlEncoder,
 		ctrlDecoder:           ctrlDecoder,
 		operationResponseChan: operationResponseChan,
+		RedisDAO:              redisDAO,
 	}
 }
 

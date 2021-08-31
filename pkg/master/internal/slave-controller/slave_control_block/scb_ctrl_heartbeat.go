@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/PenguinCats/Unison-Docker-Controller/api/types/container"
 	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/internal_control_types"
 	"github.com/sirupsen/logrus"
 	"time"
@@ -48,6 +49,8 @@ func (scb *SlaveControlBlock) handleHeartbeatMessage(v []byte) {
 
 	fmt.Println(m)
 
+	go scb.heartbeatContainerStatusUpdate(m.ContainerStatus)
+
 	scb.sendHeartbeatACK()
 
 	scb.SetLastHeartbeatTime(time.Now())
@@ -60,7 +63,7 @@ func (scb *SlaveControlBlock) startHeartbeatCheck(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			default:
-				time.Sleep(time.Second * 30)
+				time.Sleep(time.Second * 15)
 				lastHeartBeatTime := scb.GetLastHeartbeatTime()
 				if time.Now().Sub(lastHeartBeatTime) > time.Minute*3 {
 					scb.offline()
@@ -69,4 +72,10 @@ func (scb *SlaveControlBlock) startHeartbeatCheck(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+func (scb *SlaveControlBlock) heartbeatContainerStatusUpdate(containerStatus map[string]container.ContainerStatus) {
+	for k, v := range containerStatus {
+		_ = scb.RedisDAO.ContainerUpdateStatus(k, v)
+	}
 }

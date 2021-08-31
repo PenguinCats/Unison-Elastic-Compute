@@ -47,8 +47,9 @@ func (s *Slave) startSendHeartbeat(ctx context.Context) {
 				return
 			default:
 				m := internal_control_types.HeartBeatMessageReport{
-					Status:   s.GetStatus(),
-					Resource: *s.dc.GetResourceAvailable(),
+					Status:          s.GetStatus(),
+					Resource:        *s.dc.GetResourceAvailable(),
+					ContainerStatus: s.dc.ContainerAllStats(),
 				}
 				v, err := json.Marshal(&m)
 				if err != nil {
@@ -63,7 +64,7 @@ func (s *Slave) startSendHeartbeat(ctx context.Context) {
 					logrus.Warning(err.Error())
 				}
 			}
-			time.Sleep(time.Second * 30)
+			time.Sleep(time.Second * 15)
 		}
 	}()
 }
@@ -75,7 +76,7 @@ func (s *Slave) startHeartbeatCheck(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			default:
-				time.Sleep(time.Second * 30)
+				time.Sleep(time.Second * 15)
 				lastHeartBeatTime := s.GetLastHeartbeatTime()
 				if time.Now().Sub(lastHeartBeatTime) > time.Minute*3 {
 					s.offline()

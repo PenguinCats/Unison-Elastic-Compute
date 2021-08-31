@@ -43,7 +43,7 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 	uuid := auth.GenerateRandomUUID()
 
 	scb := slave_control_block.NewWithCtrl(types.StatusWaitingEstablishControlConnection,
-		uuid, token, c, e, d, sc.operationResponseChan)
+		uuid, token, c, e, d, sc.operationResponseChan, sc.redisDAO)
 	scb.SetLastHeartbeatTime(time.Now())
 
 	sc.slaveCtrBlkMutex.Lock()
