@@ -7,12 +7,27 @@
 
 package types
 
-type StatusSlave int
+type StatsSlave int
 
 const (
-	StatusWaitingEstablishControlConnection StatusSlave = iota
-	StatusWaitingEstablishDataConnection
-	StatusNormal
-	StatusStopped
-	StatusOffline
+	StatsWaitingEstablishControlConnection StatsSlave = iota
+	StatsWaitingEstablishDataConnection
+	StatsNormal
+	StatsStopped
+	StatsOffline
 )
+
+func GetSlaveStatsString(stats StatsSlave) string {
+	switch stats {
+	case StatsWaitingEstablishControlConnection, StatsWaitingEstablishDataConnection:
+		return "connecting"
+	case StatsNormal:
+		return "online"
+	case StatsStopped:
+		return "stopped"
+	case StatsOffline:
+		return "offline"
+	default:
+		return "error"
+	}
+}

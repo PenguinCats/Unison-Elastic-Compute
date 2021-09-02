@@ -42,8 +42,7 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 	token := auth.GenerateRandomUUID()
 	uuid := auth.GenerateRandomUUID()
 
-	scb := slave_control_block.NewWithCtrl(types.StatusWaitingEstablishControlConnection,
-		uuid, token, c, e, d, sc.operationResponseChan, sc.redisDAO)
+	scb := slave_control_block.NewWithCtrl(uuid, token, c, e, d, sc.operationResponseChan, sc.redisDAO)
 	scb.SetLastHeartbeatTime(time.Now())
 
 	sc.slaveCtrBlkMutex.Lock()
@@ -78,7 +77,7 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
-	scb.SetStatus(types.StatusWaitingEstablishDataConnection)
+	scb.SetStatus(types.StatsWaitingEstablishDataConnection)
 	scb.SetLastHeartbeatTime(time.Now())
 }
 
@@ -109,6 +108,12 @@ func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
+	err = sc.redisDAO.SlaveResetHostInfo(hs1b.UUID, hs1b.HostInfo)
+	if err != nil {
+		err = ErrEstablishDataConnInvalidRequest
+		return
+	}
+
 	ok = scb.GetToken() == hs1b.Token
 	if ok != true {
 		err = ErrEstablishDataConnInvalidRequest
@@ -128,6 +133,5 @@ func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
-	scb.SetStatus(types.StatusNormal)
 	scb.Start()
 }

@@ -116,6 +116,7 @@ func (t *RedisDAO) ContainerUpdateStatus(containerID string, status container.Co
 		"mem_percent", strconv.FormatFloat(status.MemoryPercent, 'f', 5, 64),
 		"mem_size", strconv.FormatFloat(status.MemorySize, 'f', 5, 64),
 		"storage_size", strconv.FormatInt(status.StorageSize, 10))
+
 	_ = conn.Send("EXPIRE", containerStatusKey, 45)
 
 	_, err := conn.Do("EXEC")

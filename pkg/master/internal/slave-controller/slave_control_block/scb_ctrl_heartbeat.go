@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/PenguinCats/Unison-Docker-Controller/api/types/container"
+	"github.com/PenguinCats/Unison-Docker-Controller/api/types/resource"
+	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
 	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/internal_control_types"
 	"github.com/sirupsen/logrus"
 	"time"
@@ -50,6 +52,7 @@ func (scb *SlaveControlBlock) handleHeartbeatMessage(v []byte) {
 	fmt.Println(m)
 
 	go scb.heartbeatContainerStatusUpdate(m.ContainerStatus)
+	go scb.heartbeatSlaveStatusUpdate(scb.uuid, m.Stats, m.Resource)
 
 	scb.sendHeartbeatACK()
 
@@ -78,4 +81,8 @@ func (scb *SlaveControlBlock) heartbeatContainerStatusUpdate(containerStatus map
 	for k, v := range containerStatus {
 		_ = scb.RedisDAO.ContainerUpdateStatus(k, v)
 	}
+}
+
+func (scb *SlaveControlBlock) heartbeatSlaveStatusUpdate(slaveID string, stats types.StatsSlave, resource resource.ResourceAvailable) {
+	_ = scb.RedisDAO.SlaveUpdateStatus(slaveID, stats, resource)
 }

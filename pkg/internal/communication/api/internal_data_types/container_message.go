@@ -90,6 +90,6 @@ type ContainerRemoveResponse struct {
 //type ContainerStatusResponse struct {
 //	OperationID string
 //	ContainerID string
-//	Status      container.ContainerStatus
+//	Stats      container.ContainerStatus
 //	Flag        ContainerStatusResultFlag
 //}

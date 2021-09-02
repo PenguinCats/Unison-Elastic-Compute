@@ -18,7 +18,7 @@ func (s *Slave) register() error {
 		return err
 	}
 
-	s.status = slave2.StatusNormal
+	s.status = slave2.StatsNormal
 	return nil
 }
 
@@ -102,8 +102,9 @@ func (s *Slave) establishDataConn(ip, port, uuid, token string) error {
 
 	// Establish Data Connection Handshake Step 1
 	hs1b := connect2.EstablishDataConnectionHandShakeStep1Body{
-		UUID:  uuid,
-		Token: token,
+		UUID:     uuid,
+		Token:    token,
+		HostInfo: s.dc.GetHostInfo(),
 	}
 	err = dataEncoder.Encode(&hs1b)
 	if err != nil {

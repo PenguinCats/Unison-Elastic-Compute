@@ -47,7 +47,7 @@ func (s *Slave) startSendHeartbeat(ctx context.Context) {
 				return
 			default:
 				m := internal_control_types.HeartBeatMessageReport{
-					Status:          s.GetStatus(),
+					Stats:           s.GetStatus(),
 					Resource:        *s.dc.GetResourceAvailable(),
 					ContainerStatus: s.dc.ContainerAllStats(),
 				}

@@ -7,6 +7,8 @@
 
 package internal_connect_types
 
+import "github.com/PenguinCats/Unison-Docker-Controller/api/types/hosts"
+
 type EstablishCtrlConnectionHandshakeStep1Body struct {
 	SecretKey string `json:"secret_key"`
 	Seq       int64  `json:"seq"`
@@ -24,8 +26,9 @@ type EstablishCtrlConnectionHandshakeStep3Body struct {
 }
 
 type EstablishDataConnectionHandShakeStep1Body struct {
-	UUID  string
-	Token string
+	UUID     string
+	Token    string
+	HostInfo hosts.HostInfo
 }
 
 type EstablishDataConnectionHandShakeStep2Body struct {

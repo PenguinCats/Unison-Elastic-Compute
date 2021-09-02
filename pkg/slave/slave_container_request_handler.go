@@ -162,7 +162,7 @@ func (s *Slave) handleContainerRemoveMessage(v []byte) {
 //	resp := internal_data_types.ContainerStatusResponse{
 //		OperationUUID: m.OperationUUID,
 //		ContainerID: m.ContainerID,
-//		Status:      container.ContainerStatus{},
+//		Stats:      container.ContainerStatus{},
 //		Flag:        internal_data_types.ContainerStatusFail,
 //	}
 //	defer func() {
@@ -175,7 +175,7 @@ func (s *Slave) handleContainerRemoveMessage(v []byte) {
 //
 //	status, err := s.dc.ContainerStats(m.ContainerID)
 //	if err != nil {
-//		resp.Status = status
+//		resp.Stats = status
 //		resp.Flag = internal_data_types.ContainerStatusSuccess
 //	}
 //}

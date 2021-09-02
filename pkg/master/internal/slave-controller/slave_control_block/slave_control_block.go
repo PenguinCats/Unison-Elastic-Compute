@@ -20,7 +20,7 @@ import (
 )
 
 type SlaveControlBlock struct {
-	status types.StatusSlave
+	status types.StatsSlave
 
 	uuid  string
 	token string
@@ -43,12 +43,11 @@ type SlaveControlBlock struct {
 	RedisDAO              *redis_util.RedisDAO
 }
 
-func NewWithCtrl(status types.StatusSlave, uuid, token string,
+func NewWithCtrl(uuid, token string,
 	ctrlConn net.Conn, ctrlEncoder *json.Encoder, ctrlDecoder *json.Decoder,
 	operationResponseChan chan *operation.OperationResponse, redisDAO *redis_util.RedisDAO) *SlaveControlBlock {
 
-	return &SlaveControlBlock{
-		status:                status,
+	scb := &SlaveControlBlock{
 		uuid:                  uuid,
 		token:                 token,
 		ctrlConn:              ctrlConn,
@@ -57,15 +56,20 @@ func NewWithCtrl(status types.StatusSlave, uuid, token string,
 		operationResponseChan: operationResponseChan,
 		RedisDAO:              redisDAO,
 	}
+
+	scb.SetStatus(types.StatsWaitingEstablishControlConnection)
+
+	return scb
 }
 
-func (scb *SlaveControlBlock) SetStatus(statusSlave types.StatusSlave) {
-	scb.mu.Lock()
+func (scb *SlaveControlBlock) SetStatus(statusSlave types.StatsSlave) {
 	scb.status = statusSlave
-	scb.mu.Unlock()
+	go func() {
+		_ = scb.RedisDAO.SlaveUpdateStats(scb.uuid, statusSlave)
+	}()
 }
 
-func (scb *SlaveControlBlock) GetStatus() types.StatusSlave {
+func (scb *SlaveControlBlock) GetStatus() types.StatsSlave {
 	scb.mu.RLock()
 	defer scb.mu.RUnlock()
 	return scb.status
@@ -118,6 +122,7 @@ func (scb *SlaveControlBlock) Start() {
 	scb.scbStopFunc = cancel
 	scb.mu.Unlock()
 
+	scb.SetStatus(types.StatsNormal)
 	scb.startHandleCtrlMessage(ctx)
 	scb.startHandleDataMessage(ctx)
 	scb.startHeartbeatCheck(ctx)
@@ -126,7 +131,7 @@ func (scb *SlaveControlBlock) Start() {
 func (scb *SlaveControlBlock) StopWork() {
 	scb.stopActivity()
 	scb.mu.Lock()
-	scb.status = types.StatusStopped
+	scb.SetStatus(types.StatsStopped)
 	scb.mu.Unlock()
 	logrus.Warningf("slave [%s] stop", scb.GetUUID())
 }
@@ -142,7 +147,7 @@ func (scb *SlaveControlBlock) stopActivity() {
 func (scb *SlaveControlBlock) offline() {
 	scb.stopActivity()
 	scb.mu.Lock()
-	scb.status = types.StatusOffline
+	scb.SetStatus(types.StatsOffline)
 	scb.mu.Unlock()
 	logrus.Warningf("slave [%s] offline", scb.GetUUID())
 }

@@ -7,7 +7,7 @@ import (
 )
 
 type HeartBeatMessageReport struct {
-	Status   types.StatusSlave
+	Stats    types.StatsSlave
 	Resource resource.ResourceAvailable
 
 	ContainerStatus map[string]container.ContainerStatus

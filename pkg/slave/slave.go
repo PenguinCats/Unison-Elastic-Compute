@@ -15,7 +15,7 @@ import (
 )
 
 type Slave struct {
-	status types.StatusSlave
+	status types.StatsSlave
 
 	masterIP   string
 	masterPort string
@@ -81,11 +81,11 @@ func (s *Slave) Start() {
 func (s *Slave) StopWork() {
 	s.stopActivity()
 	s.mu.Lock()
-	s.status = types.StatusStopped
+	s.status = types.StatsStopped
 	s.mu.Unlock()
 }
 
-func (s *Slave) GetStatus() types.StatusSlave {
+func (s *Slave) GetStatus() types.StatsSlave {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -103,6 +103,6 @@ func (s *Slave) stopActivity() {
 func (s *Slave) offline() {
 	s.stopActivity()
 	s.mu.Lock()
-	s.status = types.StatusOffline
+	s.status = types.StatsOffline
 	s.mu.Unlock()
 }
