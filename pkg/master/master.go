@@ -46,7 +46,7 @@ func New(cmb types.CreatMasterBody) (*Master, error) {
 	}
 	m.slaveController = slaveController
 
-	httpApiController := http_controller.NewHttpApiController(m.apiPort, m.operationTaskChan)
+	httpApiController := http_controller.NewHttpApiController(m.apiPort, m.operationTaskChan, rdao)
 	m.httpApiController = httpApiController
 
 	if err := m.init(cmb.Recovery); err != nil {

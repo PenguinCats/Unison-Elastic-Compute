@@ -1,6 +1,7 @@
 package http_controller
 
 import (
+	"github.com/PenguinCats/Unison-Elastic-Compute/internal/redis_util"
 	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/master/internal/operation"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -10,13 +11,17 @@ type HttpApiController struct {
 	r                 *gin.Engine
 	apiPort           string
 	operationTaskChan chan *operation.OperationTask
+
+	redisDAO *redis_util.RedisDAO
 }
 
-func NewHttpApiController(apiPort string, operationTaskChan chan *operation.OperationTask) *HttpApiController {
+func NewHttpApiController(apiPort string, operationTaskChan chan *operation.OperationTask,
+	redisDAO *redis_util.RedisDAO) *HttpApiController {
 	hac := &HttpApiController{
 		r:                 gin.Default(),
 		apiPort:           apiPort,
 		operationTaskChan: operationTaskChan,
+		redisDAO:          redisDAO,
 	}
 
 	hac.initRouter()
@@ -51,6 +56,13 @@ func (hac *HttpApiController) initRouter() {
 			apiContainer.POST("/stop", hac.containerStop)
 			apiContainer.POST("/remove", hac.containerRemove)
 			// read-only
+		}
+
+		apiSlave := api.Group("/slave")
+		{
+			// read-only
+			apiSlave.POST("/list", hac.slaveList)
+			apiSlave.POST("/status", hac.slaveStatus)
 		}
 
 		////获取标签列表
