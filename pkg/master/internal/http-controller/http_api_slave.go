@@ -2,16 +2,17 @@ package http_controller
 
 import (
 	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
+	"github.com/PenguinCats/Unison-Elastic-Compute/internal/auth"
 	"github.com/PenguinCats/Unison-Elastic-Compute/internal/http_wrapper"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 )
 
-func (hac *HttpApiController) slaveList(c *gin.Context) {
+func (hac *HttpApiController) slaveUUIDList(c *gin.Context) {
 	var appG = http_wrapper.Gin{C: c}
 
-	response := types.APISlaveListResponse{Slaves: []types.SlaveProfile{}}
+	var response types.APISlaveUUIDListResponse
 	code := types.SUCCESS
 
 	defer func() {
@@ -20,13 +21,38 @@ func (hac *HttpApiController) slaveList(c *gin.Context) {
 		}
 	}()
 
-	uuidList, err := hac.redisDAO.SlaveUUIDList()
+	list, err := hac.redisDAO.SlaveUUIDList()
 	if err != nil {
 		code = types.ERROR
 		return
 	}
+	response.SlavesUUID = list
 
-	for _, uuid := range uuidList {
+	appG.Response(http.StatusOK, code, response)
+}
+
+func (hac *HttpApiController) slaveProfileList(c *gin.Context) {
+	var (
+		appG = http_wrapper.Gin{C: c}
+		form types.APISlaveProfileListRequest
+	)
+
+	httpCode, errCode := http_wrapper.BindAndValid(c, &form)
+	if errCode != types.SUCCESS {
+		appG.Response(httpCode, errCode, nil)
+		return
+	}
+
+	response := types.APISlaveProfileListResponse{Slaves: []types.SlaveProfile{}}
+	code := types.SUCCESS
+
+	defer func() {
+		if code != types.SUCCESS {
+			appG.Response(http.StatusOK, code, nil)
+		}
+	}()
+
+	for _, uuid := range form.SlavesUUID {
 		profile, err := hac.redisDAO.SlaveProfile(uuid)
 		if err != nil {
 			continue
@@ -119,4 +145,30 @@ func (hac *HttpApiController) slaveStatus(c *gin.Context) {
 	}
 
 	appG.Response(http.StatusOK, errCode, response)
+}
+
+func (hac *HttpApiController) getSlaveAddToken(c *gin.Context) {
+	var appG = http_wrapper.Gin{C: c}
+
+	token, err := hac.redisDAO.SlaveGetAddToken()
+	if err != nil {
+		appG.Response(http.StatusOK, types.ERROR, nil)
+		return
+	}
+
+	appG.Response(http.StatusOK, types.SUCCESS, types.APISlaveAddToken{Token: token})
+}
+
+func (hac *HttpApiController) updateSlaveAddToken(c *gin.Context) {
+	var appG = http_wrapper.Gin{C: c}
+
+	token := auth.GenerateRandomUUID()
+
+	err := hac.redisDAO.SlaveUpdateAddToken(token)
+	if err != nil {
+		appG.Response(http.StatusOK, types.ERROR, nil)
+		return
+	}
+
+	appG.Response(http.StatusOK, types.SUCCESS, types.APISlaveAddToken{Token: token})
 }

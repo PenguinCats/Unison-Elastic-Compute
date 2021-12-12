@@ -57,8 +57,8 @@ func (t *RedisDAO) SlaveProfile(slaveID string) (map[string]string, error) {
 	for _, key := range profileKey {
 		_, ok := mp[key]
 		if !ok {
-			err = errors.New("profile not enough")
-			logrus.Error(err.Error())
+			err = fmt.Errorf("profile not enough for slaveID: %s", slaveID)
+			logrus.Warning(err.Error())
 			return nil, err
 		}
 	}
@@ -168,4 +168,32 @@ func (t *RedisDAO) SlaveUpdateStatus(slaveID string, stats types.StatsSlave, res
 		logrus.Warning(err.Error())
 	}
 	return err
+}
+
+func (t *RedisDAO) SlaveUpdateAddToken(token string) error {
+	key := "uec:slave_add_token"
+
+	conn := t.pool.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("SET", key, token, "EX", 300)
+	if err != nil {
+		logrus.Warning(err.Error())
+	}
+
+	return err
+}
+
+func (t *RedisDAO) SlaveGetAddToken() (string, error) {
+	key := "uec:slave_add_token"
+
+	conn := t.pool.Get()
+	defer conn.Close()
+
+	token, err := redis.String(conn.Do("GET", key))
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
 }

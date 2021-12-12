@@ -14,7 +14,15 @@ type SlaveProfile struct {
 	PhysicalCoreCnt int    `json:"physical_core_cnt"`
 }
 
-type APISlaveListResponse struct {
+type APISlaveUUIDListResponse struct {
+	SlavesUUID []string `json:"slaves"`
+}
+
+type APISlaveProfileListRequest struct {
+	SlavesUUID []string `json:"slaves"`
+}
+
+type APISlaveProfileListResponse struct {
 	Slaves []SlaveProfile `json:"slaves"`
 }
 
@@ -32,4 +40,8 @@ type APISlaveStatusItem struct {
 
 type APISlaveStatusResponse struct {
 	Status []APISlaveStatusItem `json:"status"`
+}
+
+type APISlaveAddToken struct {
+	Token string `json:"token"`
 }

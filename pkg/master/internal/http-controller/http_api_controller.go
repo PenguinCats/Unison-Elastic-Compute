@@ -61,8 +61,11 @@ func (hac *HttpApiController) initRouter() {
 		apiSlave := api.Group("/slave")
 		{
 			// read-only
-			apiSlave.POST("/list", hac.slaveList)
+			apiSlave.POST("/uuid_list", hac.slaveUUIDList)
+			apiSlave.POST("/profile", hac.slaveProfileList)
 			apiSlave.POST("/status", hac.slaveStatus)
+			apiSlave.POST("/add_token", hac.getSlaveAddToken)
+			apiSlave.POST("/update_add_token", hac.updateSlaveAddToken)
 		}
 
 		////获取标签列表
