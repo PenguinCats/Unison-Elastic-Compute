@@ -37,6 +37,12 @@ type DockerController struct {
 
 var DockerControllerSetting = &DockerController{}
 
+type System struct {
+	Reload bool
+}
+
+var SystemSetting = &System{}
+
 var cfg *ini.File
 
 func LoadGlobalSetting(configPath string) (err error) {
@@ -48,6 +54,7 @@ func LoadGlobalSetting(configPath string) (err error) {
 	mapTo("connect", ConnectSetting)
 	mapTo("docker_controller", DockerControllerSetting)
 	mapTo("host", HostSetting)
+	mapTo("system", SystemSetting)
 
 	return err
 }

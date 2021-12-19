@@ -1,18 +1,7 @@
 package types
 
-type APIRequestBase struct {
-	OperationID string `form:"operation_id" valid:"Required"`
-	CallbackURL string `form:"callback_url" valid:"Required"`
-}
-
-type APIResponseBase struct {
-	OperationID string `json:"operation_id"`
-	Code        int    `json:"code"`
-	Msg         string `json:"msg"`
-}
-
 type APIContainerCreateRequest struct {
-	APIRequestBase
+	APICallBackRequestBase
 	SlaveID        string `form:"slave_id" valid:"Required"`
 	UECContainerID string `form:"uec_container_id" valid:"Required"`
 
@@ -31,7 +20,7 @@ type APIContainerCreateRequest struct {
 }
 
 type APIContainerCreateResponse struct {
-	APIResponseBase `json:"api_response_base"`
+	APICallBackResponseBase `json:"api_response_base"`
 
 	ExposedTCPPorts        []string `json:"exposed_tcp_ports"`
 	ExposedTCPMappingPorts []string `json:"exposed_tcp_mapping_ports"`
@@ -40,31 +29,31 @@ type APIContainerCreateResponse struct {
 }
 
 type APIContainerStartRequest struct {
-	APIRequestBase
+	APICallBackRequestBase
 	SlaveID        string `form:"slave_id" valid:"Required"`
 	UECContainerID string `form:"uec_container_id" valid:"Required"`
 }
 
 type APIContainerStartResponse struct {
-	APIResponseBase `json:"api_response_base"`
+	APICallBackResponseBase `json:"api_response_base"`
 }
 
 type APIContainerStopRequest struct {
-	APIRequestBase
+	APICallBackRequestBase
 	SlaveID        string `form:"slave_id" valid:"Required"`
 	UECContainerID string `form:"uec_container_id" valid:"Required"`
 }
 
 type APIContainerStopResponse struct {
-	APIResponseBase `json:"api_response_base"`
+	APICallBackResponseBase `json:"api_response_base"`
 }
 
 type APIContainerRemoveRequest struct {
-	APIRequestBase
+	APICallBackRequestBase
 	SlaveID        string `form:"slave_id" valid:"Required"`
 	UECContainerID string `form:"uec_container_id" valid:"Required"`
 }
 
 type APIContainerRemoveResponse struct {
-	APIResponseBase `json:"api_response_base"`
+	APICallBackResponseBase `json:"api_response_base"`
 }

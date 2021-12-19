@@ -23,6 +23,7 @@ func main() {
 		MasterPort:      ConnectSetting.MasterPort,
 		MasterSecretKey: ConnectSetting.MasterSecretKey,
 		HostPortBias:    HostSetting.PortBias,
+		Reload:          SystemSetting.Reload,
 	}, docker_controller.DockerControllerCreatBody{
 		MemoryReserveRatio:          DockerControllerSetting.MemoryReserveRatio,
 		StorageReserveRatioForImage: DockerControllerSetting.StorageReserveRatioForImage,
@@ -30,7 +31,11 @@ func main() {
 		CoreAvailableList:           DockerControllerSetting.CoreAvailableList,
 		HostPortRange:               DockerControllerSetting.HostPortRange,
 		ContainerStopTimeout:        DockerControllerSetting.ContainerStopTimeout,
+		Reload:                      SystemSetting.Reload,
 	})
+	if err != nil {
+		panic(err.Error())
+	}
 
 	slave.Start()
 

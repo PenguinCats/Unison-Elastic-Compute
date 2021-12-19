@@ -3,13 +3,13 @@ package operation
 type OperationType int
 
 type OperationTask struct {
-	OperationID string
+	OperationID int64
 	CallbackURL string
 
 	OperationTaskBody interface{}
 }
 
 type OperationResponse struct {
-	OperationID           string
+	OperationID           int64
 	OperationResponseBody interface{}
 }

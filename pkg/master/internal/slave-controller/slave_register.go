@@ -9,11 +9,14 @@ package slave_controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
 	"github.com/PenguinCats/Unison-Elastic-Compute/internal/auth"
 	register2 "github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/internal_connect_types"
 	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/master/internal/slave-controller/slave_control_block"
 	"github.com/sirupsen/logrus"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"net"
 	"time"
 )
@@ -29,7 +32,7 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 
 	e := json.NewEncoder(c)
 
-	// Establish Ctrl Communication Hand shake Step 1
+	// Establish Ctrl Communication Handshake Step 1
 	hs1b := register2.EstablishCtrlConnectionHandshakeStep1Body{}
 	err = d.Decode(&hs1b)
 	if err != nil {
@@ -49,7 +52,7 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 	sc.slaveCtrBlk[uuid] = scb
 	sc.slaveCtrBlkMutex.Unlock()
 
-	// Establish Ctrl Communication Hand shake Step 2
+	// Establish Ctrl Communication Handshake Step 2
 	localSeq := auth.GenerateRandomInt()
 	hs2b := register2.EstablishCtrlConnectionHandshakeStep2Body{
 		Ack:   hs1b.Seq + 1,
@@ -64,7 +67,7 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
-	// Establish Ctrl Communication Hand shake Step 3
+	// Establish Ctrl Communication Handshake Step 3
 	hs3b := register2.EstablishCtrlConnectionHandshakeStep3Body{}
 	err = d.Decode(&hs3b)
 	if err != nil {
@@ -79,6 +82,15 @@ func (sc *SlaveController) establishCtrlConnection(c net.Conn, d *json.Decoder) 
 
 	scb.SetStatus(types.StatsWaitingEstablishDataConnection)
 	scb.SetLastHeartbeatTime(time.Now())
+
+	batch := new(leveldb.Batch)
+	batch.Put([]byte(fmt.Sprintf("slave:token:%s", uuid)), []byte(token))
+	err = sc.db.Write(batch, &opt.WriteOptions{
+		Sync: true,
+	})
+	if err != nil {
+		return
+	}
 }
 
 func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) {

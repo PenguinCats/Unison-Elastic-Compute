@@ -4,6 +4,7 @@ import (
 	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
 	"github.com/PenguinCats/Unison-Elastic-Compute/internal/auth"
 	"github.com/PenguinCats/Unison-Elastic-Compute/internal/http_wrapper"
+	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/master/internal/operation"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -171,4 +172,28 @@ func (hac *HttpApiController) updateSlaveAddToken(c *gin.Context) {
 	}
 
 	appG.Response(http.StatusOK, types.SUCCESS, types.APISlaveAddToken{Token: token})
+}
+
+func (hac *HttpApiController) deleteSlave(c *gin.Context) {
+	var (
+		appG = http_wrapper.Gin{C: c}
+		form types.APISlaveDeleteRequest
+	)
+
+	httpCode, errCode := http_wrapper.BindAndValid(c, &form)
+	if errCode != types.SUCCESS {
+		appG.Response(httpCode, errCode, nil)
+		return
+	}
+
+	hac.operationTaskChan <- &operation.OperationTask{
+		OperationID: form.OperationID,
+		CallbackURL: form.CallbackURL,
+		OperationTaskBody: operation.OperationSlaveDeleteTask{
+			OperationID: form.OperationID,
+			SlaveID:     form.SlaveUUID,
+		},
+	}
+
+	appG.Response(http.StatusOK, types.SUCCESS, nil)
 }

@@ -18,4 +18,6 @@ type CreatMasterBody struct {
 	RedisPort     string
 	RedisPassword string
 	RedisDB       string
+
+	Reload bool
 }

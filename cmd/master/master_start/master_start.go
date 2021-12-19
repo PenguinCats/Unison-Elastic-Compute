@@ -31,6 +31,7 @@ func main() {
 		RedisPort:                RedisSetting.RedisPort,
 		RedisPassword:            RedisSetting.RedisPassword,
 		RedisDB:                  RedisSetting.RedisDB,
+		Reload:                   SystemSetting.Reload,
 	}
 	m, err := master.New(cmb)
 	if err != nil {

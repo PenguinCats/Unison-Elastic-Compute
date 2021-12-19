@@ -39,6 +39,12 @@ type Redis struct {
 
 var RedisSetting = &Redis{}
 
+type System struct {
+	Reload bool
+}
+
+var SystemSetting = &System{}
+
 var cfg *ini.File
 
 func LoadGlobalSetting(configPath string) (err error) {
@@ -51,6 +57,7 @@ func LoadGlobalSetting(configPath string) (err error) {
 	mapTo("api", ApiSetting)
 	mapTo("redis", RedisSetting)
 	mapTo("general", GeneralSetting)
+	mapTo("system", SystemSetting)
 
 	return err
 }

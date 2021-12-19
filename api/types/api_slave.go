@@ -45,3 +45,13 @@ type APISlaveStatusResponse struct {
 type APISlaveAddToken struct {
 	Token string `json:"token"`
 }
+
+type APISlaveDeleteRequest struct {
+	APICallBackRequestBase
+	SlaveUUID string `json:"slave_uuid"`
+}
+
+type APISlaveDeleteResponse struct {
+	APICallBackResponseBase
+	SlaveUUID string `json:"slave_uuid"`
+}

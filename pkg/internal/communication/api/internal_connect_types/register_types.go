@@ -33,3 +33,14 @@ type EstablishDataConnectionHandShakeStep1Body struct {
 
 type EstablishDataConnectionHandShakeStep2Body struct {
 }
+
+type ReconnectCtrlConnectionHandshakeStep1Body struct {
+	Seq   int64  `json:"seq"`
+	Token string `json:"token"`
+	UUID  string `json:"uuid"`
+}
+
+type ReconnectCtrlConnectionHandshakeStep2Body struct {
+	Ack   int64 `json:"ack"`
+	Agree bool  `json:"agree"`
+}

@@ -27,6 +27,8 @@ func (m *Master) handleOperationTask() {
 				go m.handleOperationContainerStopTask(body)
 			case operation.OperationContainerRemoveTask:
 				go m.handleOperationContainerRemoveTask(body)
+			case operation.OperationSlaveDeleteTask:
+				go m.handleOperationSlaveDeleteTask(body)
 			default:
 				logrus.Warning(operation.ErrOperationTask.Error())
 			}

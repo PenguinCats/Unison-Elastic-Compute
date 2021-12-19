@@ -197,3 +197,19 @@ func (t *RedisDAO) SlaveGetAddToken() (string, error) {
 
 	return token, nil
 }
+
+func (t *RedisDAO) SlaveDelete(slaveID string) error {
+	conn := t.pool.Get()
+	defer conn.Close()
+
+	keys, err := redis.Strings(conn.Do("KEYS", fmt.Sprintf("uec:slave:%s*", slaveID)))
+
+	if err != nil {
+		logrus.Warning(err.Error())
+		return err
+
+	}
+
+	_, _ = conn.Do("DEL", redis.Args{}.AddFlat(keys)...)
+	return nil
+}

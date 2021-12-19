@@ -12,7 +12,7 @@ type ConnectionType int
 const (
 	ConnectionTypeEstablishCtrlConnection ConnectionType = iota
 	ConnectionTypeEstablishDataConnection
-	ConnectionTypeReconnect
+	ConnectionTypeReconnectCtrlConnection
 	ConnectionTypeError
 )
 

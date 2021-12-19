@@ -7,14 +7,16 @@ import (
 	"github.com/PenguinCats/Unison-Elastic-Compute/internal/auth"
 	"github.com/PenguinCats/Unison-Elastic-Compute/internal/network"
 	connect2 "github.com/PenguinCats/Unison-Elastic-Compute/pkg/internal/communication/api/internal_connect_types"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 func (s *Slave) register() error {
-	if err := s.establishCtrlConn(s.masterIP, s.masterPort, s.secretKey); err != nil {
+	if err := s.establishCtrlConn(); err != nil {
 		return err
 	}
 
-	if err := s.establishDataConn(s.masterIP, s.masterPort, s.uuid, s.token); err != nil {
+	if err := s.establishDataConn(); err != nil {
 		return err
 	}
 
@@ -22,10 +24,10 @@ func (s *Slave) register() error {
 	return nil
 }
 
-func (s *Slave) establishCtrlConn(ip, port, secretKey string) error {
-	conn, err := network.CreateConn(ip, port)
+func (s *Slave) establishCtrlConn() error {
+	conn, err := network.CreateConn(s.masterIP, s.masterPort)
 	if err != nil {
-		return fmt.Errorf("internal_connect_types to : %s:%s failed with [%s]", ip, port, err.Error())
+		return fmt.Errorf("internal_connect_types to : %s:%s failed with [%s]", s.masterIP, s.masterPort, err.Error())
 	}
 	defer func() {
 		if err != nil {
@@ -39,13 +41,14 @@ func (s *Slave) establishCtrlConn(ip, port, secretKey string) error {
 	// Mark the purpose of the internal_connect_types
 	err = ctrlEncoder.Encode(&connect2.ConnectionHead{ConnectionType: connect2.ConnectionTypeEstablishCtrlConnection})
 	if err != nil {
-		return fmt.Errorf("establish ctrl internal_connect_types failed with [%s]", err.Error())
+		err = fmt.Errorf("establish ctrl internal_connect_types failed with [%s]", err.Error())
+		return err
 	}
 
 	// Handshake Step 1
 	localSeq := auth.GenerateRandomInt()
 	hs1b := connect2.EstablishCtrlConnectionHandshakeStep1Body{
-		SecretKey: secretKey,
+		SecretKey: s.joinSecretKey,
 		Seq:       localSeq,
 	}
 	err = ctrlEncoder.Encode(&hs1b)
@@ -60,7 +63,8 @@ func (s *Slave) establishCtrlConn(ip, port, secretKey string) error {
 		return fmt.Errorf("establish ctrl internal_connect_types failed in step 2 with [%s]", err.Error())
 	}
 	if localSeq+1 != hs2b.Ack {
-		return fmt.Errorf("establish ctrl internal_connect_types failed with [wrong ack]")
+		err = fmt.Errorf("establish ctrl internal_connect_types failed with [wrong ack]")
+		return err
 	}
 	s.uuid = hs2b.UUID
 	s.token = hs2b.Token
@@ -77,13 +81,23 @@ func (s *Slave) establishCtrlConn(ip, port, secretKey string) error {
 	s.ctrlConn = conn
 	s.ctrlDecoder = ctrlDecoder
 	s.ctrlEncoder = ctrlEncoder
+
+	batch := new(leveldb.Batch)
+	batch.Put([]byte("uec:token"), []byte(s.token))
+	batch.Put([]byte("uec:uuid"), []byte(s.uuid))
+	err = s.db.Write(batch, &opt.WriteOptions{
+		Sync: true,
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (s *Slave) establishDataConn(ip, port, uuid, token string) error {
-	conn, err := network.CreateConn(ip, port)
+func (s *Slave) establishDataConn() error {
+	conn, err := network.CreateConn(s.masterIP, s.masterPort)
 	if err != nil {
-		return fmt.Errorf("internal_connect_types to : %s:%s failed with [%s]", ip, port, err.Error())
+		return fmt.Errorf("internal_connect_types to : %s:%s failed with [%s]", s.masterIP, s.masterPort, err.Error())
 	}
 	defer func() {
 		if err != nil {
@@ -102,8 +116,8 @@ func (s *Slave) establishDataConn(ip, port, uuid, token string) error {
 
 	// Establish Data Connection Handshake Step 1
 	hs1b := connect2.EstablishDataConnectionHandShakeStep1Body{
-		UUID:     uuid,
-		Token:    token,
+		UUID:     s.uuid,
+		Token:    s.token,
 		HostInfo: s.dc.GetHostInfo(),
 	}
 	err = dataEncoder.Encode(&hs1b)

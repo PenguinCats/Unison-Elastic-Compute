@@ -1,7 +1,6 @@
 package master
 
 import (
-	"encoding/json"
 	types2 "github.com/PenguinCats/Unison-Docker-Controller/api/types"
 	"github.com/PenguinCats/Unison-Docker-Controller/api/types/container"
 	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
@@ -11,14 +10,17 @@ import (
 )
 
 func (m *Master) handleOperationContainerCreateTask(task operation.OperationContainerCreateTask) {
+	oprInfo, ok := operation.OprInfoUtil.GetOptInfo(task.OperationID)
+	if !ok {
+		return
+	}
+
 	var errCode = types.SUCCESS
 	defer func() {
 		if errCode != types.SUCCESS {
 			m.redisDAO.ContainerDelAll(task.ContainerCreateMessage.CCB.ExtContainerID)
-
-			oprInfo := operation.OprInfoUtil.GetOptInfo(task.OperationID)
 			resp := types.APIContainerCreateResponse{
-				APIResponseBase: types.APIResponseBase{
+				APICallBackResponseBase: types.APICallBackResponseBase{
 					OperationID: task.OperationID,
 					Code:        errCode,
 					Msg:         types.GetMsg(errCode),
@@ -28,12 +30,12 @@ func (m *Master) handleOperationContainerCreateTask(task operation.OperationCont
 				ExposedUDPPorts:        nil,
 				ExposedUDPMappingPorts: nil,
 			}
-			sendDataByte, jsonErr := json.Marshal(resp)
-			if jsonErr != nil {
-				logrus.Warning(jsonErr.Error())
+
+			err := http_controller.SendCallbackPostWithoutResponse(oprInfo.CallbackURL, &resp)
+			if err != nil {
+				logrus.Warning(err.Error())
 				return
 			}
-			http_controller.SendCallback(oprInfo.CallbackURL, sendDataByte)
 		}
 	}()
 
@@ -59,7 +61,11 @@ func (m *Master) handleOperationContainerCreateTask(task operation.OperationCont
 }
 
 func (m *Master) handleOperationContainerCreateResponse(resp operation.OperationContainerCreateResponse) {
-	oprInfo := operation.OprInfoUtil.GetOptInfo(resp.OperationID)
+	oprInfo, ok := operation.OprInfoUtil.GetOptInfo(resp.OperationID)
+	if !ok {
+		return
+	}
+	operation.OprInfoUtil.DelOptInfo(resp.OperationID)
 
 	var errCode = types.SUCCESS
 	if resp.Error != nil {
@@ -76,7 +82,7 @@ func (m *Master) handleOperationContainerCreateResponse(resp operation.Operation
 	}
 
 	response := types.APIContainerCreateResponse{
-		APIResponseBase: types.APIResponseBase{
+		APICallBackResponseBase: types.APICallBackResponseBase{
 			OperationID: resp.OperationID,
 			Code:        errCode,
 			Msg:         types.GetMsg(errCode),
@@ -98,35 +104,38 @@ func (m *Master) handleOperationContainerCreateResponse(resp operation.Operation
 
 	m.redisDAO.ContainerReleaseBusy(resp.UECContainerID)
 
-	sendDataByte, jsonErr := json.Marshal(response)
-	if jsonErr != nil {
-		logrus.Warning(jsonErr.Error())
+	err := http_controller.SendCallbackPostWithoutResponse(oprInfo.CallbackURL, &response)
+	if err != nil {
+		logrus.Warning(err.Error())
 		return
 	}
-	http_controller.SendCallback(oprInfo.CallbackURL, sendDataByte)
 }
 
 func (m *Master) handleOperationContainerStartTask(task operation.OperationContainerStartTask) {
+	oprInfo, ok := operation.OprInfoUtil.GetOptInfo(task.OperationID)
+	if !ok {
+		return
+	}
+
 	var errCode = types.SUCCESS
 	defer func() {
 		if errCode != types.SUCCESS {
 			_ = m.redisDAO.ContainerUpdateStats(task.ExtContainerID, container.Removing)
 			m.redisDAO.ContainerReleaseBusy(task.ExtContainerID)
 
-			oprInfo := operation.OprInfoUtil.GetOptInfo(task.OperationID)
 			resp := types.APIContainerStartResponse{
-				APIResponseBase: types.APIResponseBase{
+				APICallBackResponseBase: types.APICallBackResponseBase{
 					OperationID: task.OperationID,
 					Code:        errCode,
 					Msg:         types.GetMsg(errCode),
 				},
 			}
-			sendDataByte, jsonErr := json.Marshal(resp)
-			if jsonErr != nil {
-				logrus.Warning(jsonErr.Error())
+
+			err := http_controller.SendCallbackPostWithoutResponse(oprInfo.CallbackURL, &resp)
+			if err != nil {
+				logrus.Warning(err.Error())
 				return
 			}
-			http_controller.SendCallback(oprInfo.CallbackURL, sendDataByte)
 		}
 	}()
 
@@ -150,7 +159,11 @@ func (m *Master) handleOperationContainerStartTask(task operation.OperationConta
 }
 
 func (m *Master) handleOperationContainerStartResponse(resp operation.OperationContainerStartResponse) {
-	oprInfo := operation.OprInfoUtil.GetOptInfo(resp.OperationID)
+	oprInfo, ok := operation.OprInfoUtil.GetOptInfo(resp.OperationID)
+	if !ok {
+		return
+	}
+	operation.OprInfoUtil.DelOptInfo(resp.OperationID)
 
 	var errCode = types.SUCCESS
 	if resp.Error != nil {
@@ -171,42 +184,45 @@ func (m *Master) handleOperationContainerStartResponse(resp operation.OperationC
 	m.redisDAO.ContainerReleaseBusy(resp.UECContainerID)
 
 	response := types.APIContainerStartResponse{
-		APIResponseBase: types.APIResponseBase{
+		APICallBackResponseBase: types.APICallBackResponseBase{
 			OperationID: resp.OperationID,
 			Code:        errCode,
 			Msg:         types.GetMsg(errCode),
 		},
 	}
 
-	sendDataByte, jsonErr := json.Marshal(response)
-	if jsonErr != nil {
-		logrus.Warning(jsonErr.Error())
+	err := http_controller.SendCallbackPostWithoutResponse(oprInfo.CallbackURL, &response)
+	if err != nil {
+		logrus.Warning(err.Error())
 		return
 	}
-	http_controller.SendCallback(oprInfo.CallbackURL, sendDataByte)
 }
 
 func (m *Master) handleOperationContainerStopTask(task operation.OperationContainerStopTask) {
+	oprInfo, ok := operation.OprInfoUtil.GetOptInfo(task.OperationID)
+	if !ok {
+		return
+	}
+
 	var errCode = types.SUCCESS
 	defer func() {
 		if errCode != types.SUCCESS {
 			_ = m.redisDAO.ContainerUpdateStats(task.ExtContainerID, container.Error)
 			m.redisDAO.ContainerReleaseBusy(task.ExtContainerID)
 
-			oprInfo := operation.OprInfoUtil.GetOptInfo(task.OperationID)
 			resp := types.APIContainerStopResponse{
-				APIResponseBase: types.APIResponseBase{
+				APICallBackResponseBase: types.APICallBackResponseBase{
 					OperationID: task.OperationID,
 					Code:        errCode,
 					Msg:         types.GetMsg(errCode),
 				},
 			}
-			sendDataByte, jsonErr := json.Marshal(resp)
-			if jsonErr != nil {
-				logrus.Warning(jsonErr.Error())
+
+			err := http_controller.SendCallbackPostWithoutResponse(oprInfo.CallbackURL, &resp)
+			if err != nil {
+				logrus.Warning(err.Error())
 				return
 			}
-			http_controller.SendCallback(oprInfo.CallbackURL, sendDataByte)
 		}
 	}()
 
@@ -230,7 +246,11 @@ func (m *Master) handleOperationContainerStopTask(task operation.OperationContai
 }
 
 func (m *Master) handleOperationContainerStopResponse(resp operation.OperationContainerStopResponse) {
-	oprInfo := operation.OprInfoUtil.GetOptInfo(resp.OperationID)
+	oprInfo, ok := operation.OprInfoUtil.GetOptInfo(resp.OperationID)
+	if !ok {
+		return
+	}
+	operation.OprInfoUtil.DelOptInfo(resp.OperationID)
 
 	var errCode = types.SUCCESS
 	if resp.Error != nil {
@@ -248,42 +268,45 @@ func (m *Master) handleOperationContainerStopResponse(resp operation.OperationCo
 	m.redisDAO.ContainerReleaseBusy(resp.UECContainerID)
 
 	response := types.APIContainerStopResponse{
-		APIResponseBase: types.APIResponseBase{
+		APICallBackResponseBase: types.APICallBackResponseBase{
 			OperationID: resp.OperationID,
 			Code:        errCode,
 			Msg:         types.GetMsg(errCode),
 		},
 	}
 
-	sendDataByte, jsonErr := json.Marshal(response)
-	if jsonErr != nil {
-		logrus.Warning(jsonErr.Error())
+	err := http_controller.SendCallbackPostWithoutResponse(oprInfo.CallbackURL, &response)
+	if err != nil {
+		logrus.Warning(err.Error())
 		return
 	}
-	http_controller.SendCallback(oprInfo.CallbackURL, sendDataByte)
 }
 
 func (m *Master) handleOperationContainerRemoveTask(task operation.OperationContainerRemoveTask) {
+	oprInfo, ok := operation.OprInfoUtil.GetOptInfo(task.OperationID)
+	if !ok {
+		return
+	}
+
 	var errCode = types.SUCCESS
 	defer func() {
 		if errCode != types.SUCCESS {
 			_ = m.redisDAO.ContainerUpdateStats(task.ExtContainerID, container.Error)
 			m.redisDAO.ContainerReleaseBusy(task.ExtContainerID)
 
-			oprInfo := operation.OprInfoUtil.GetOptInfo(task.OperationID)
 			resp := types.APIContainerRemoveResponse{
-				APIResponseBase: types.APIResponseBase{
+				APICallBackResponseBase: types.APICallBackResponseBase{
 					OperationID: task.OperationID,
 					Code:        errCode,
 					Msg:         types.GetMsg(errCode),
 				},
 			}
-			sendDataByte, jsonErr := json.Marshal(resp)
-			if jsonErr != nil {
-				logrus.Warning(jsonErr.Error())
+
+			err := http_controller.SendCallbackPostWithoutResponse(oprInfo.CallbackURL, &resp)
+			if err != nil {
+				logrus.Warning(err.Error())
 				return
 			}
-			http_controller.SendCallback(oprInfo.CallbackURL, sendDataByte)
 		}
 	}()
 
@@ -307,7 +330,11 @@ func (m *Master) handleOperationContainerRemoveTask(task operation.OperationCont
 }
 
 func (m *Master) handleOperationContainerRemoveResponse(resp operation.OperationContainerRemoveResponse) {
-	oprInfo := operation.OprInfoUtil.GetOptInfo(resp.OperationID)
+	oprInfo, ok := operation.OprInfoUtil.GetOptInfo(resp.OperationID)
+	if !ok {
+		return
+	}
+	operation.OprInfoUtil.DelOptInfo(resp.OperationID)
 
 	var errCode = types.SUCCESS
 	if resp.Error != nil {
@@ -323,17 +350,16 @@ func (m *Master) handleOperationContainerRemoveResponse(resp operation.Operation
 	m.redisDAO.ContainerDelAll(resp.UECContainerID)
 
 	response := types.APIContainerRemoveResponse{
-		APIResponseBase: types.APIResponseBase{
+		APICallBackResponseBase: types.APICallBackResponseBase{
 			OperationID: resp.OperationID,
 			Code:        errCode,
 			Msg:         types.GetMsg(errCode),
 		},
 	}
 
-	sendDataByte, jsonErr := json.Marshal(response)
-	if jsonErr != nil {
-		logrus.Warning(jsonErr.Error())
+	err := http_controller.SendCallbackPostWithoutResponse(oprInfo.CallbackURL, &response)
+	if err != nil {
+		logrus.Warning(err.Error())
 		return
 	}
-	http_controller.SendCallback(oprInfo.CallbackURL, sendDataByte)
 }

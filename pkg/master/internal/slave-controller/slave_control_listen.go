@@ -48,7 +48,8 @@ func (sc *SlaveController) handleControlConnection(c net.Conn) {
 		sc.establishCtrlConnection(c, d)
 	case connect2.ConnectionTypeEstablishDataConnection:
 		sc.establishDataConnection(c, d)
-	case connect2.ConnectionTypeReconnect:
+	case connect2.ConnectionTypeReconnectCtrlConnection:
+		sc.reconnectCtrlConnection(c, d)
 	case connect2.ConnectionTypeError:
 	default:
 		err = ErrInvalidConnectionRequest

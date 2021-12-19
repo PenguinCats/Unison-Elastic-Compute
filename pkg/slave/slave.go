@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"github.com/PenguinCats/Unison-Docker-Controller/api/types/docker_controller"
 	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
+	"github.com/PenguinCats/Unison-Elastic-Compute/internal/util"
 	"github.com/sirupsen/logrus"
+	"github.com/syndtr/goleveldb/leveldb"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -17,9 +20,9 @@ import (
 type Slave struct {
 	status types.StatsSlave
 
-	masterIP   string
-	masterPort string
-	secretKey  string
+	masterIP      string
+	masterPort    string
+	joinSecretKey string
 
 	uuid  string
 	token string
@@ -40,28 +43,93 @@ type Slave struct {
 
 	dc           *controller.DockerController
 	hostPortBias int
+
+	db *leveldb.DB
 }
 
 func NewSlave(cb types.CreatSlaveBody, dccb docker_controller.DockerControllerCreatBody) (*Slave, error) {
+	dbPath := "/var/opt/uec/slave.db"
+
+	if !cb.Reload {
+		exist, err := util.IsPathExists(dbPath)
+		if err != nil {
+			return nil, err
+		}
+		if exist {
+			e := os.RemoveAll(dbPath)
+			if e != nil {
+				logrus.Warning(e.Error())
+				return nil, err
+			}
+		}
+	}
+
+	db, err := leveldb.OpenFile("/var/opt/uec/slave.db", nil)
+	if err != nil {
+		return nil, err
+	}
+
 	dc, err := controller.NewDockerController(&dccb)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Slave{
-		masterIP:     cb.MasterIP,
-		masterPort:   cb.MasterPort,
-		secretKey:    cb.MasterSecretKey,
-		dc:           dc,
-		hostPortBias: cb.HostPortBias,
-	}, nil
+	slave := &Slave{
+		masterIP:      cb.MasterIP,
+		masterPort:    cb.MasterPort,
+		joinSecretKey: cb.MasterSecretKey,
+		dc:            dc,
+		hostPortBias:  cb.HostPortBias,
+		db:            db,
+	}
+
+	if cb.Reload {
+		exist_token, err_token := db.Has([]byte("uec:token"), nil)
+		if err_token != nil {
+			return nil, err
+		}
+
+		exist_uuid, err_uuid := db.Has([]byte("uec:uuid"), nil)
+		if err_uuid != nil {
+			return nil, err
+		}
+
+		if !exist_uuid || !exist_token {
+			logrus.Warning("No existing connection record, perform new registration")
+		} else {
+			token, err := db.Get([]byte("uec:token"), nil)
+			if err_uuid != nil {
+				return nil, err
+			}
+
+			uuid, err := db.Get([]byte("uec:uuid"), nil)
+			if err != nil {
+				return nil, err
+			}
+
+			slave.token = string(token)
+			slave.uuid = string(uuid)
+		}
+	}
+
+	return slave, nil
 }
 
 func (s *Slave) Start() {
-	err := s.register()
-	if err != nil {
-		panic(fmt.Sprintf("Slave Start Error with [%s]", err.Error()))
+	if s.uuid != "" && s.token != "" {
+		// 执行恢复
+		err := s.reconnect()
+		if err != nil {
+			panic(fmt.Sprintf("Slave Start Reconnect Error with [%s]", err.Error()))
+		}
+	} else {
+		// 新注册
+		err := s.register()
+		if err != nil {
+			panic(fmt.Sprintf("Slave Connect Error with [%s]", err.Error()))
+		}
 	}
+
 	logrus.Warning("register success")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -72,7 +140,6 @@ func (s *Slave) Start() {
 
 	time.Sleep(time.Second)
 
-	// TODO do heartbeat check
 	s.startSendHeartbeat(ctx)
 	//slave.startHeartbeatCheck(ctx)
 

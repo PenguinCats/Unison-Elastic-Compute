@@ -18,7 +18,7 @@ var MsgFlags = map[int]string{
 	INVALID_PARAMS: "请求参数错误",
 	UNKNOWN_ERROR:  "未知错误",
 
-	SLAVE_INVALID:               "设备机不可用",
+	SLAVE_INVALID:               "设备机无效",
 	SLAVE_INSUFFICIENT_RESOURCE: "设备机资源不足",
 
 	CONTAINER_IS_BUSY: "该容器正在进行其他操作",

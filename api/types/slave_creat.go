@@ -13,4 +13,6 @@ type CreatSlaveBody struct {
 	MasterSecretKey string
 
 	HostPortBias int
+
+	Reload bool
 }

@@ -62,6 +62,30 @@ func NewWithCtrl(uuid, token string,
 	return scb
 }
 
+func NewWithReload(uuid, token string,
+	operationResponseChan chan *operation.OperationResponse, redisDAO *redis_util.RedisDAO) *SlaveControlBlock {
+
+	scb := &SlaveControlBlock{
+		uuid:                  uuid,
+		token:                 token,
+		operationResponseChan: operationResponseChan,
+		RedisDAO:              redisDAO,
+	}
+
+	scb.SetStatus(types.StatsOffline)
+
+	return scb
+}
+
+func (scb *SlaveControlBlock) ResetCtrl(ctrlConn net.Conn, ctrlEncoder *json.Encoder, ctrlDecoder *json.Decoder) {
+	scb.mu.Lock()
+	defer scb.mu.Unlock()
+
+	scb.ctrlConn = ctrlConn
+	scb.ctrlEncoder = ctrlEncoder
+	scb.ctrlDecoder = ctrlDecoder
+}
+
 func (scb *SlaveControlBlock) SetStatus(statusSlave types.StatsSlave) {
 	scb.status = statusSlave
 	go func() {
@@ -114,7 +138,7 @@ func (scb *SlaveControlBlock) SetDataEncoderDecoder(e *json.Encoder, d *json.Dec
 }
 
 func (scb *SlaveControlBlock) Start() {
-	logrus.Warningf("new slave [%s] joined", scb.GetUUID())
+	logrus.Warningf("slave [%s] joined", scb.GetUUID())
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -138,16 +162,24 @@ func (scb *SlaveControlBlock) StopWork() {
 
 func (scb *SlaveControlBlock) stopActivity() {
 	scb.mu.Lock()
-	scb.scbStopFunc()
-	_ = scb.ctrlConn.Close()
-	_ = scb.dataConn.Close()
+	if scb.scbStopFunc != nil {
+		scb.scbStopFunc()
+	}
+	if scb.ctrlConn != nil {
+		_ = scb.ctrlConn.Close()
+	}
+	if scb.dataConn != nil {
+		_ = scb.dataConn.Close()
+	}
 	scb.mu.Unlock()
 }
 
 func (scb *SlaveControlBlock) offline() {
-	scb.stopActivity()
-	scb.mu.Lock()
-	scb.SetStatus(types.StatsOffline)
-	scb.mu.Unlock()
-	logrus.Warningf("slave [%s] offline", scb.GetUUID())
+	if scb.GetStatus() != types.StatsOffline {
+		scb.stopActivity()
+		scb.mu.Lock()
+		scb.SetStatus(types.StatsOffline)
+		scb.mu.Unlock()
+		logrus.Warningf("slave [%s] offline", scb.GetUUID())
+	}
 }

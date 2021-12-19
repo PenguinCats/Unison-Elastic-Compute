@@ -21,4 +21,7 @@ var (
 
 	ErrEstablishDataConnInvalidRequest = errors.New("invalid establish internal_data_types internal_connect_types request")
 	ErrEstablishDataConnStepFail       = errors.New("establish internal_data_types internal_connect_types step fail")
+
+	ErrReconnectCtrlConnInvalidRequest = errors.New("invalid reconnect ctrl internal_connect_types request")
+	ErrReconnectCtrlConnStepFail       = errors.New("reconnect ctrl internal_connect_types step fail")
 )

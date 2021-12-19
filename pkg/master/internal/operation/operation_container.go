@@ -6,7 +6,7 @@ import (
 )
 
 type OperationContainerCreateTask struct {
-	OperationID string
+	OperationID int64
 
 	SlaveID string
 
@@ -14,7 +14,7 @@ type OperationContainerCreateTask struct {
 }
 
 type OperationContainerCreateResponse struct {
-	OperationID string
+	OperationID int64
 	Error       error
 
 	UECContainerID string
@@ -22,7 +22,7 @@ type OperationContainerCreateResponse struct {
 }
 
 type OperationContainerStartTask struct {
-	OperationID string
+	OperationID int64
 
 	SlaveID string
 
@@ -30,13 +30,13 @@ type OperationContainerStartTask struct {
 }
 
 type OperationContainerStartResponse struct {
-	OperationID    string
+	OperationID    int64
 	Error          error
 	UECContainerID string
 }
 
 type OperationContainerStopTask struct {
-	OperationID string
+	OperationID int64
 
 	SlaveID string
 
@@ -44,13 +44,13 @@ type OperationContainerStopTask struct {
 }
 
 type OperationContainerStopResponse struct {
-	OperationID    string
+	OperationID    int64
 	Error          error
 	UECContainerID string
 }
 
 type OperationContainerRemoveTask struct {
-	OperationID string
+	OperationID int64
 
 	SlaveID string
 
@@ -58,7 +58,7 @@ type OperationContainerRemoveTask struct {
 }
 
 type OperationContainerRemoveResponse struct {
-	OperationID    string
+	OperationID    int64
 	Error          error
 	UECContainerID string
 }

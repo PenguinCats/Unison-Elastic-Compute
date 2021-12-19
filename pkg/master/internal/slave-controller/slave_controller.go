@@ -11,6 +11,8 @@ import (
 	"github.com/PenguinCats/Unison-Elastic-Compute/internal/redis_util"
 	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/master/internal/operation"
 	"github.com/PenguinCats/Unison-Elastic-Compute/pkg/master/internal/slave-controller/slave_control_block"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
 	"net"
 	"sync"
 )
@@ -18,6 +20,7 @@ import (
 type CreateSlaveControllerBody struct {
 	SlaveControlListenerPort string
 	RedisDAO                 *redis_util.RedisDAO
+	Db                       *leveldb.DB
 	OperationResponseChan    chan *operation.OperationResponse
 }
 
@@ -28,6 +31,7 @@ type SlaveController struct {
 	slaveCtrBlkMutex sync.RWMutex
 
 	redisDAO              *redis_util.RedisDAO
+	db                    *leveldb.DB
 	operationResponseChan chan *operation.OperationResponse
 }
 
@@ -47,10 +51,28 @@ func NewSlaveController(cscb CreateSlaveControllerBody) (*SlaveController, error
 		slaveCtrBlk:           make(map[string]*slave_control_block.SlaveControlBlock),
 		slaveCtrBlkMutex:      sync.RWMutex{},
 		redisDAO:              cscb.RedisDAO,
+		db:                    cscb.Db,
 		operationResponseChan: cscb.OperationResponseChan,
 	}
 
 	return sc, nil
+}
+
+func (sc *SlaveController) Reload() error {
+	iter := sc.db.NewIterator(util.BytesPrefix([]byte("slave:token:")), nil)
+	for iter.Next() {
+		key := string(iter.Key())
+		uuid := key[12:]
+		token := string(iter.Value())
+
+		scb := slave_control_block.NewWithReload(uuid, token, sc.operationResponseChan, sc.redisDAO)
+
+		sc.slaveCtrBlkMutex.Lock()
+		sc.slaveCtrBlk[uuid] = scb
+		sc.slaveCtrBlkMutex.Unlock()
+	}
+
+	return nil
 }
 
 func (sc *SlaveController) Start() {

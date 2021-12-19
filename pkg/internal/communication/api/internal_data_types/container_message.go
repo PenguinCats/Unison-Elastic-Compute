@@ -3,13 +3,13 @@ package internal_data_types
 import "github.com/PenguinCats/Unison-Docker-Controller/api/types/container"
 
 type ContainerCreateMessage struct {
-	OperationID string
+	OperationID int64
 
 	CCB container.ContainerCreateBody
 }
 
 type ContainerCreateResponse struct {
-	OperationID string
+	OperationID int64
 	Error       error
 
 	ExtContainerID string
@@ -18,39 +18,39 @@ type ContainerCreateResponse struct {
 }
 
 type ContainerStartMessage struct {
-	OperationID string
+	OperationID int64
 
 	ExtContainerID string
 }
 
 type ContainerStartResponse struct {
-	OperationID string
+	OperationID int64
 	Error       error
 
 	ExtContainerID string
 }
 
 type ContainerStopMessage struct {
-	OperationID string
+	OperationID int64
 
 	ExtContainerID string
 }
 
 type ContainerStopResponse struct {
-	OperationID string
+	OperationID int64
 	Error       error
 
 	ExtContainerID string
 }
 
 type ContainerRemoveMessage struct {
-	OperationID string
+	OperationID int64
 
 	ExtContainerID string
 }
 
 type ContainerRemoveResponse struct {
-	OperationID string
+	OperationID int64
 	Error       error
 
 	ExtContainerID string
