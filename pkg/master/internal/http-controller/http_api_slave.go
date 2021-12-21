@@ -56,19 +56,23 @@ func (hac *HttpApiController) slaveProfileList(c *gin.Context) {
 	for _, uuid := range form.SlavesUUID {
 		profile, err := hac.redisDAO.SlaveProfile(uuid)
 		if err != nil {
+			response.Slaves = append(response.Slaves, types.SlaveProfile{})
 			continue
 		}
 
 		memTotalSize, err := strconv.ParseUint(profile["mem_total"], 10, 64)
 		if err != nil {
+			response.Slaves = append(response.Slaves, types.SlaveProfile{})
 			continue
 		}
 		logicalCoreCnt, err := strconv.Atoi(profile["logical_cpu_num"])
 		if err != nil {
+			response.Slaves = append(response.Slaves, types.SlaveProfile{})
 			continue
 		}
 		physicalCoreCnt, err := strconv.Atoi(profile["physical_cpu_num"])
 		if err != nil {
+			response.Slaves = append(response.Slaves, types.SlaveProfile{})
 			continue
 		}
 
