@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PenguinCats/Unison-Docker-Controller/api/types/hosts"
+	"github.com/PenguinCats/Unison-Docker-Controller/api/types/image"
 	"github.com/PenguinCats/Unison-Docker-Controller/api/types/resource"
 	"github.com/PenguinCats/Unison-Elastic-Compute/api/types"
 	"github.com/gomodule/redigo/redis"
 	"github.com/sirupsen/logrus"
 	"regexp"
+	"strconv"
 )
 
 //func (t *RedisDAO) SlaveResetProfile(slaveID string) error {
@@ -24,7 +26,6 @@ func (t *RedisDAO) SlaveUUIDList() ([]string, error) {
 	if err != nil {
 		logrus.Warning(err.Error())
 		return nil, err
-
 	}
 
 	uuidRegexp := regexp.MustCompile(`^uec:slave:([\w-]+):hostinfo$`)
@@ -212,4 +213,72 @@ func (t *RedisDAO) SlaveDelete(slaveID string) error {
 
 	_, _ = conn.Do("DEL", redis.Args{}.AddFlat(keys)...)
 	return nil
+}
+
+func (t *RedisDAO) SlaveResetImageList(slaveID string, images []image.ImageListItem) error {
+	slaveImageInfoKey := fmt.Sprintf("uec:slave:%s:image", slaveID)
+
+	conn := t.pool.Get()
+	defer conn.Close()
+
+	_ = conn.Send("MULTI")
+	for _, img := range images {
+		slaveImageItemKey := slaveImageInfoKey + ":" + img.Name
+		_ = conn.Send("HMSET", slaveImageItemKey,
+			"name", img.Name,
+			"size", img.Size,
+			"createdTime", img.CreatedTime)
+	}
+	_, err := conn.Do("EXEC")
+
+	if err != nil {
+		logrus.Warning(err.Error())
+	}
+	return err
+}
+
+func (t *RedisDAO) SlaveGetImageList(slaveID string) ([]types.ImageListItem, error) {
+	conn := t.pool.Get()
+	defer conn.Close()
+
+	keys, err := redis.Strings(conn.Do("KEYS", fmt.Sprintf("uec:slave:%s:image:*", slaveID)))
+	if err != nil {
+		logrus.Warning(err.Error())
+		return nil, err
+	}
+
+	var images []types.ImageListItem
+	for _, key := range keys {
+		imageMp, err := redis.StringMap(conn.Do("HGETALL", key))
+		if err != nil {
+			continue
+		}
+
+		name, ok := imageMp["name"]
+		if !ok {
+			continue
+		}
+
+		size, ok := imageMp["size"]
+		if !ok {
+			continue
+		}
+		sizeInt64, err := strconv.ParseInt(size, 10, 64)
+		if err != nil {
+			continue
+		}
+
+		createdTime, ok := imageMp["createdTime"]
+		if !ok {
+			continue
+		}
+
+		images = append(images, types.ImageListItem{
+			Name:        name,
+			Size:        sizeInt64,
+			CreatedTime: createdTime,
+		})
+	}
+
+	return images, nil
 }

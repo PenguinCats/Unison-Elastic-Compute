@@ -7,7 +7,10 @@
 
 package internal_connect_types
 
-import "github.com/PenguinCats/Unison-Docker-Controller/api/types/hosts"
+import (
+	"github.com/PenguinCats/Unison-Docker-Controller/api/types/hosts"
+	"github.com/PenguinCats/Unison-Docker-Controller/api/types/image"
+)
 
 type EstablishCtrlConnectionHandshakeStep1Body struct {
 	SecretKey string `json:"secret_key"`
@@ -26,9 +29,10 @@ type EstablishCtrlConnectionHandshakeStep3Body struct {
 }
 
 type EstablishDataConnectionHandShakeStep1Body struct {
-	UUID     string
-	Token    string
-	HostInfo hosts.HostInfo
+	UUID      string
+	Token     string
+	HostInfo  hosts.HostInfo
+	ImageList []image.ImageListItem
 }
 
 type EstablishDataConnectionHandShakeStep2Body struct {

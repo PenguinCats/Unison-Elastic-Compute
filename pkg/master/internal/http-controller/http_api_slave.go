@@ -201,3 +201,26 @@ func (hac *HttpApiController) deleteSlave(c *gin.Context) {
 
 	appG.Response(http.StatusOK, types.SUCCESS, nil)
 }
+
+func (hac *HttpApiController) slaveImageList(c *gin.Context) {
+	var (
+		appG = http_wrapper.Gin{C: c}
+		form types.APISlaveImageListRequest
+	)
+
+	httpCode, errCode := http_wrapper.BindAndValid(c, &form)
+	if errCode != types.SUCCESS {
+		appG.Response(httpCode, errCode, nil)
+		return
+	}
+
+	images, err := hac.redisDAO.SlaveGetImageList(form.SlaveUUID)
+	if err != nil {
+		errCode = types.ERROR
+		appG.Response(httpCode, errCode, nil)
+		return
+	}
+
+	response := types.APISlaveImageListResponse{Images: images}
+	appG.Response(httpCode, errCode, response)
+}

@@ -126,6 +126,12 @@ func (sc *SlaveController) establishDataConnection(c net.Conn, d *json.Decoder) 
 		return
 	}
 
+	err = sc.redisDAO.SlaveResetImageList(hs1b.UUID, hs1b.ImageList)
+	if err != nil {
+		err = ErrEstablishDataConnInvalidRequest
+		return
+	}
+
 	ok = scb.GetToken() == hs1b.Token
 	if ok != true {
 		err = ErrEstablishDataConnInvalidRequest

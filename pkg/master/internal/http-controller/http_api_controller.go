@@ -67,6 +67,7 @@ func (hac *HttpApiController) initRouter() {
 			apiSlave.POST("/add_token", hac.getSlaveAddToken)
 			apiSlave.POST("/update_add_token", hac.updateSlaveAddToken)
 			apiSlave.POST("/delete", hac.deleteSlave)
+			apiSlave.POST("/image_list", hac.slaveImageList)
 		}
 
 		////获取标签列表

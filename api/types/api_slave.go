@@ -55,3 +55,17 @@ type APISlaveDeleteResponse struct {
 	APICallBackResponseBase
 	SlaveUUID string `json:"slave_uuid"`
 }
+
+type APISlaveImageListRequest struct {
+	SlaveUUID string `json:"slave_uuid"`
+}
+
+type ImageListItem struct {
+	Name        string `json:"name"`
+	Size        int64  `json:"size"`
+	CreatedTime string `json:"created_time"`
+}
+
+type APISlaveImageListResponse struct {
+	Images []ImageListItem `json:"images"`
+}

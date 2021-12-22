@@ -115,10 +115,17 @@ func (s *Slave) establishDataConn() error {
 	}
 
 	// Establish Data Connection Handshake Step 1
+	imageList, err := s.dc.ImageList()
+	if err != nil {
+		if err != nil {
+			return fmt.Errorf("establish internal_data_types internal_connect_types failed with fetch image list[%s]", err.Error())
+		}
+	}
 	hs1b := connect2.EstablishDataConnectionHandShakeStep1Body{
-		UUID:     s.uuid,
-		Token:    s.token,
-		HostInfo: s.dc.GetHostInfo(),
+		UUID:      s.uuid,
+		Token:     s.token,
+		HostInfo:  s.dc.GetHostInfo(),
+		ImageList: imageList,
 	}
 	err = dataEncoder.Encode(&hs1b)
 	if err != nil {
